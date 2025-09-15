@@ -1599,6 +1599,10 @@ export class AirtableService {
   static async saveCompletedSteps(dashboardId: string, completedSteps: number[], stepNotes: {[key: number]: string}): Promise<{ success: boolean; error?: string }> {
     try {
       console.log('💾 Saving completed steps:', { dashboardId, completedSteps, stepNotes });
+      console.log('🔍 Using fields:', { 
+        COMPLETED_STEPS: DASHBOARD_FIELDS.COMPLETED_STEPS, 
+        STEP_NOTES: DASHBOARD_FIELDS.STEP_NOTES 
+      });
       
       // Get the dashboard record first
       const getResponse = await axios.get(`${AIRTABLE_TABLE_URL}?filterByFormula={dashboard_id}='${dashboardId}'`, {
@@ -1608,12 +1612,15 @@ export class AirtableService {
         }
       });
 
+      console.log('🔍 Get response:', getResponse.data);
+
       if (!getResponse.data.records || getResponse.data.records.length === 0) {
         console.error('❌ Dashboard record not found:', dashboardId);
         return { success: false, error: 'Dashboard record not found' };
       }
 
       const recordId = getResponse.data.records[0].id;
+      console.log('🔍 Found record ID:', recordId);
       
       // Update the completed steps and step notes
       const updateData = {
@@ -1621,7 +1628,9 @@ export class AirtableService {
         [DASHBOARD_FIELDS.STEP_NOTES]: JSON.stringify(stepNotes)
       };
 
-      await axios.patch(`${AIRTABLE_TABLE_URL}/${recordId}`, 
+      console.log('🔍 Update data:', updateData);
+
+      const updateResponse = await axios.patch(`${AIRTABLE_TABLE_URL}/${recordId}`, 
         { fields: updateData }, 
         {
           headers: {
@@ -1631,10 +1640,15 @@ export class AirtableService {
         }
       );
 
+      console.log('🔍 Update response:', updateResponse.data);
       console.log('✅ Completed steps saved successfully');
       return { success: true };
     } catch (error) {
       console.error('❌ Error saving completed steps:', error);
+      if (error.response) {
+        console.error('❌ Error response:', error.response.data);
+        console.error('❌ Error status:', error.response.status);
+      }
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown error' 
@@ -1646,6 +1660,10 @@ export class AirtableService {
   static async loadCompletedSteps(dashboardId: string): Promise<{ success: boolean; completedSteps?: number[]; stepNotes?: {[key: number]: string}; error?: string }> {
     try {
       console.log('📥 Loading completed steps for dashboard:', dashboardId);
+      console.log('🔍 Using fields:', { 
+        COMPLETED_STEPS: DASHBOARD_FIELDS.COMPLETED_STEPS, 
+        STEP_NOTES: DASHBOARD_FIELDS.STEP_NOTES 
+      });
       
       const response = await axios.get(`${AIRTABLE_TABLE_URL}?filterByFormula={dashboard_id}='${dashboardId}'`, {
         headers: {
@@ -1654,14 +1672,24 @@ export class AirtableService {
         }
       });
 
+      console.log('🔍 Load response:', response.data);
+
       if (!response.data.records || response.data.records.length === 0) {
         console.error('❌ Dashboard record not found:', dashboardId);
         return { success: false, error: 'Dashboard record not found' };
       }
 
       const record = response.data.records[0];
+      console.log('🔍 Record fields:', record.fields);
+      
       const completedStepsData = record.fields[DASHBOARD_FIELDS.COMPLETED_STEPS];
       const stepNotesData = record.fields[DASHBOARD_FIELDS.STEP_NOTES];
+
+      console.log('🔍 Raw data:', { 
+        completedStepsData, 
+        stepNotesData,
+        fieldNames: Object.keys(record.fields)
+      });
 
       let completedSteps: number[] = [];
       let stepNotes: {[key: number]: string} = {};
@@ -1669,23 +1697,33 @@ export class AirtableService {
       if (completedStepsData) {
         try {
           completedSteps = JSON.parse(completedStepsData);
+          console.log('✅ Parsed completed steps:', completedSteps);
         } catch (e) {
           console.warn('⚠️ Error parsing completed steps data:', e);
         }
+      } else {
+        console.log('⚠️ No completed steps data found in record');
       }
 
       if (stepNotesData) {
         try {
           stepNotes = JSON.parse(stepNotesData);
+          console.log('✅ Parsed step notes:', stepNotes);
         } catch (e) {
           console.warn('⚠️ Error parsing step notes data:', e);
         }
+      } else {
+        console.log('⚠️ No step notes data found in record');
       }
 
       console.log('✅ Completed steps loaded successfully:', { completedSteps, stepNotes });
       return { success: true, completedSteps, stepNotes };
     } catch (error) {
       console.error('❌ Error loading completed steps:', error);
+      if (error.response) {
+        console.error('❌ Error response:', error.response.data);
+        console.error('❌ Error status:', error.response.status);
+      }
       return {
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown error' 
