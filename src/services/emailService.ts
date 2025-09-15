@@ -535,8 +535,19 @@ export class EmailService {
     try {
       console.log('📧 Sending via EmailJS to:', emailData.to);
       
-      // For EmailJS, we'll send the HTML content directly
-      // The template should be configured in EmailJS dashboard
+      // Extract variables for the existing EmailJS template
+      // Try to extract userName from the HTML content if available
+      let userName = emailData.to.split('@')[0]; // Default: extract from email
+      
+      // Look for userName in the HTML content (from our email templates)
+      const userNameMatch = emailData.html.match(/¡Hola\s+([^!]+)!/);
+      if (userNameMatch) {
+        userName = userNameMatch[1].trim();
+      }
+      
+      const name = 'Konsul Plan'; // From name
+      const email = emailData.to; // Reply to email
+      
       const response = await fetch(EMAIL_CONFIG.EMAILJS.API_URL, {
         method: 'POST',
         headers: {
@@ -549,8 +560,9 @@ export class EmailService {
           template_params: {
             to_email: emailData.to,
             subject: emailData.subject,
-            message: emailData.html,
-            text_message: emailData.text || emailData.html.replace(/<[^>]*>/g, '')
+            userName: userName,
+            name: name,
+            email: email
           }
         })
       });
