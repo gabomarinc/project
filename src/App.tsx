@@ -1068,6 +1068,7 @@ function App() {
           expirationDate.setDate(expirationDate.getDate() + 30);
           
           // Send payment success email
+          const dashboardUrl = `${window.location.origin}?preview=${sessionData.previewId}`;
           const emailSent = await EmailService.sendPaymentSuccessEmail({
             userEmail: sessionData.email,
             userName: sessionData.email.split('@')[0],
@@ -1085,7 +1086,8 @@ function App() {
               year: 'numeric',
               month: 'long',
               day: 'numeric'
-            })
+            }),
+            dashboardUrl: dashboardUrl
           });
           
           if (emailSent) {

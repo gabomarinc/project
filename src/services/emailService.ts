@@ -37,6 +37,7 @@ export interface PaymentSuccessEmailData {
   idea: string;
   creationDate: string;
   expirationDate: string;
+  dashboardUrl: string;
 }
 
 export class EmailService {
@@ -386,27 +387,27 @@ export class EmailService {
           </div>
           
           <div class="content">
-            <h2>¡Hola {{userName}}!</h2>
+            <h2>¡Hola ${data.userName}!</h2>
             <p>¡Excelente noticia! Tu pago ha sido procesado correctamente y tu dashboard de negocio está completamente listo para usar.</p>
             
             <div class="idea-highlight">
               <h3>💡 Tu Idea de Negocio:</h3>
-              <p style="font-size: 18px; margin: 10px 0;"><strong>{{idea}}</strong></p>
+              <p style="font-size: 18px; margin: 10px 0;"><strong>${data.idea}</strong></p>
             </div>
             
             <div class="info-card">
               <h3>🔐 Información de Acceso</h3>
               <div class="info-item">
                 <span class="label">📧 Email:</span>
-                <span class="value">{{userEmail}}</span>
+                <span class="value">${data.userEmail}</span>
               </div>
               <div class="info-item">
                 <span class="label">🔑 Contraseña:</span>
-                <span class="value">{{password}}</span>
+                <span class="value">${data.password}</span>
               </div>
               <div class="info-item">
                 <span class="label">🆔 ID del Dashboard:</span>
-                <span class="dashboard-id">{{dashboardId}}</span>
+                <span class="dashboard-id">${data.dashboardId}</span>
               </div>
             </div>
             
@@ -414,11 +415,11 @@ export class EmailService {
               <h3>📅 Información del Proyecto</h3>
               <div class="info-item">
                 <span class="label">📅 Fecha de Creación:</span>
-                <span class="value">{{creationDate}}</span>
+                <span class="value">${data.creationDate}</span>
               </div>
               <div class="info-item">
                 <span class="label">⏰ Fecha de Caducidad:</span>
-                <span class="value">{{expirationDate}}</span>
+                <span class="value">${data.expirationDate}</span>
               </div>
             </div>
             
@@ -427,11 +428,11 @@ export class EmailService {
             </div>
             
             <div class="expiration">
-              <strong>⏰ Recordatorio:</strong> Tu dashboard estará disponible hasta el {{expirationDate}}. Asegúrate de descargar tu plan de negocio en PDF antes de esa fecha.
+              <strong>⏰ Recordatorio:</strong> Tu dashboard estará disponible hasta el ${data.expirationDate}. Asegúrate de descargar tu plan de negocio en PDF antes de esa fecha.
             </div>
             
             <div style="text-align: center;">
-              <a href="{{dashboardUrl}}" class="button">
+              <a href="${data.dashboardUrl}" class="button">
                 🚀 Acceder a mi Dashboard
               </a>
             </div>
@@ -463,26 +464,26 @@ export class EmailService {
     const text = `
       ¡PAGO EXITOSO! TU DASHBOARD ESTÁ LISTO
       
-      ¡Hola {{userName}}!
+      ¡Hola ${data.userName}!
       
       ¡Excelente noticia! Tu pago ha sido procesado correctamente y tu dashboard de negocio está completamente listo para usar.
       
-      TU IDEA DE NEGOCIO: {{idea}}
+      TU IDEA DE NEGOCIO: ${data.idea}
       
       INFORMACIÓN DE ACCESO:
-      Email: {{userEmail}}
-      Contraseña: {{password}}
-      ID del Dashboard: {{dashboardId}}
+      Email: ${data.userEmail}
+      Contraseña: ${data.password}
+      ID del Dashboard: ${data.dashboardId}
       
       INFORMACIÓN DEL PROYECTO:
-      Fecha de Creación: {{creationDate}}
-      Fecha de Caducidad: {{expirationDate}}
+      Fecha de Creación: ${data.creationDate}
+      Fecha de Caducidad: ${data.expirationDate}
       
       IMPORTANTE: Tu contraseña no se puede recuperar. Guárdala en un lugar seguro.
       
-      RECORDATORIO: Tu dashboard estará disponible hasta el {{expirationDate}}. Asegúrate de descargar tu plan de negocio en PDF antes de esa fecha.
+      RECORDATORIO: Tu dashboard estará disponible hasta el ${data.expirationDate}. Asegúrate de descargar tu plan de negocio en PDF antes de esa fecha.
       
-      Para acceder a tu dashboard, visita: {{dashboardUrl}}
+      Para acceder a tu dashboard, visita: ${data.dashboardUrl}
       
       ¿QUÉ PUEDES HACER AHORA?
       - Ver tu análisis completo de negocio generado por IA
@@ -534,9 +535,8 @@ export class EmailService {
     try {
       console.log('📧 Sending via EmailJS to:', emailData.to);
       
-      // Extract template parameters from HTML content
-      const templateParams = this.extractTemplateParams(emailData.html);
-      
+      // For EmailJS, we'll send the HTML content directly
+      // The template should be configured in EmailJS dashboard
       const response = await fetch(EMAIL_CONFIG.EMAILJS.API_URL, {
         method: 'POST',
         headers: {
@@ -549,7 +549,8 @@ export class EmailService {
           template_params: {
             to_email: emailData.to,
             subject: emailData.subject,
-            ...templateParams
+            message: emailData.html,
+            text_message: emailData.text || emailData.html.replace(/<[^>]*>/g, '')
           }
         })
       });
@@ -569,13 +570,6 @@ export class EmailService {
     }
   }
 
-  // Extract template parameters from HTML content
-  private static extractTemplateParams(html: string): Record<string, string> {
-    const params: Record<string, string> = {};
-    
-    // For now, return empty params - EmailJS will use the template
-    return params;
-  }
   
   // Send via SendGrid
   private static async sendViaSendGrid(emailData: EmailData): Promise<boolean> {
