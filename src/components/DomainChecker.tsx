@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { ExternalLink, Globe, Search, X } from 'lucide-react';
 
 interface DomainCheckerProps {
@@ -192,14 +193,14 @@ const DomainChecker: React.FC<DomainCheckerProps> = ({ brandNames }) => {
         )}
       </div>
 
-      {/* Modal de buscadores */}
-      {showModal && (
+      {/* Modal de buscadores - Renderizado fuera del contenedor principal */}
+      {showModal && createPortal(
         <div 
-          className="fixed inset-0 bg-black/70 flex items-center justify-center z-[99999] p-4"
+          className="fixed inset-0 bg-black/80 flex items-center justify-center z-[999999] p-4"
           onClick={() => setShowModal(false)}
         >
           <div 
-            className="bg-gray-800 border border-gray-700 rounded-xl p-6 max-w-md w-full shadow-2xl relative z-[99999]"
+            className="bg-gray-800 border border-gray-700 rounded-xl p-6 max-w-md w-full shadow-2xl relative"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
@@ -266,7 +267,8 @@ const DomainChecker: React.FC<DomainCheckerProps> = ({ brandNames }) => {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
