@@ -3671,16 +3671,26 @@ const Dashboard: React.FC<DashboardProps> = ({ name, email, idea, problem, ideal
 
           {/* Next Steps */}
           <div id="plan" className="lg:col-span-3 bg-gray-800/30 border border-gray-700 rounded-xl p-6 backdrop-blur-sm">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-cyan-500/20 rounded-lg">
-                <CheckSquare className="w-5 h-5 text-cyan-400" />
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-cyan-500/20 rounded-lg">
+                  <CheckSquare className="w-5 h-5 text-cyan-400" />
+                </div>
+                <h2 className="text-xl font-semibold text-white">Plan de Acción Personalizado</h2>
               </div>
-              <h2 className="text-xl font-semibold text-white">Plan de Acción Personalizado</h2>
-              <div className="ml-auto flex items-center gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 sm:ml-auto">
+                <span className="text-sm text-gray-400 order-2 sm:order-1">
+                  {completedSteps.length}/7 completados
+                  {completedSteps.length > 0 && (
+                    <span className="ml-2 text-cyan-400">
+                      • Próximo: Paso {completedSteps.length + 1}
+                    </span>
+                  )}
+                </span>
                 <button
                   onClick={sendFollowUpEmail}
                   disabled={isGeneratingContent || !aiContent}
-                  className={`flex items-center gap-2 px-4 py-2 border rounded-lg text-sm transition-all duration-300 ${
+                  className={`flex items-center justify-center gap-2 px-3 sm:px-4 py-2 border rounded-lg text-xs sm:text-sm transition-all duration-300 order-1 sm:order-2 ${
                     isGeneratingContent || !aiContent
                       ? 'bg-gray-600/30 text-gray-400 border-gray-500/30 cursor-not-allowed'
                       : 'bg-blue-500/20 text-blue-400 border-blue-500/30 hover:bg-blue-500/30'
@@ -3689,14 +3699,6 @@ const Dashboard: React.FC<DashboardProps> = ({ name, email, idea, problem, ideal
                 >
                   {isGeneratingContent ? '⏳ Generando...' : '📧 Enviar seguimiento'}
                 </button>
-                <span className="text-sm text-gray-400">
-                  {completedSteps.length}/7 completados
-                  {completedSteps.length > 0 && (
-                    <span className="ml-2 text-cyan-400">
-                      • Próximo: Paso {completedSteps.length + 1}
-                    </span>
-                  )}
-                </span>
               </div>
             </div>
             <div className="space-y-4">
@@ -4307,7 +4309,7 @@ const Dashboard: React.FC<DashboardProps> = ({ name, email, idea, problem, ideal
                     return (
                       <div key={index} className="relative flex flex-col sm:block">
                         {/* Step Circle - Centered on mobile, positioned on desktop */}
-                        <div className={`hidden sm:block absolute left-8 w-8 h-8 rounded-full flex items-center justify-center border-4 ${
+                        <div className={`hidden sm:flex absolute left-8 w-8 h-8 rounded-full items-center justify-center border-4 ${
                           isCompleted 
                             ? 'bg-cyan-500 border-cyan-400 shadow-lg shadow-cyan-500/25' 
                             : deadlineInfo?.isOverdue

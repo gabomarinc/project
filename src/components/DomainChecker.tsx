@@ -151,10 +151,11 @@ const DomainChecker: React.FC<DomainCheckerProps> = ({ brandNames }) => {
                 
                 <button
                   onClick={() => handleCheckDomain(variation.domain)}
-                  className="px-4 py-2 bg-gradient-to-r from-cyan-500 via-green-500 to-blue-600 text-white text-sm font-medium rounded-lg hover:shadow-lg transition-all duration-300 flex items-center gap-2"
+                  className="px-2 sm:px-4 py-2 bg-gradient-to-r from-cyan-500 via-green-500 to-blue-600 text-white text-xs sm:text-sm font-medium rounded-lg hover:shadow-lg transition-all duration-300 flex items-center gap-1 sm:gap-2 min-w-0 flex-shrink-0"
                 >
-                  <Search className="w-4 h-4" />
-                  Ver disponibilidad
+                  <Search className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                  <span className="hidden xs:inline">Ver disponibilidad</span>
+                  <span className="xs:hidden">Verificar</span>
                 </button>
               </div>
             </div>
