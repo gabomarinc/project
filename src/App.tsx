@@ -169,9 +169,38 @@ function App() {
     return () => clearInterval(timer);
   }, []);
 
+  // Listen for URL changes (especially important for mobile)
+  useEffect(() => {
+    const handleUrlChange = () => {
+      console.log('🔄 URL cambió, verificando parámetros...', window.location.href);
+      const urlParams = new URLSearchParams(window.location.search);
+      const paymentSuccess = urlParams.get('payment_success');
+      
+      if (paymentSuccess === 'true') {
+        console.log('💳 Detección tardía de pago exitoso en móvil...');
+        handlePaymentSuccess();
+      }
+    };
+
+    // Listen for popstate events (back/forward navigation)
+    window.addEventListener('popstate', handleUrlChange);
+    
+    // Also check on focus (when user returns from external app)
+    window.addEventListener('focus', handleUrlChange);
+    
+    // Check immediately in case we missed the initial load
+    handleUrlChange();
+
+    return () => {
+      window.removeEventListener('popstate', handleUrlChange);
+      window.removeEventListener('focus', handleUrlChange);
+    };
+  }, []);
+
   // Load preview or dashboard from URL on component mount
   useEffect(() => {
     const loadFromUrl = async () => {
+      console.log('🔍 Verificando parámetros de URL...', window.location.href);
       const urlParams = new URLSearchParams(window.location.search);
       const previewId = urlParams.get('preview');
       const dashboardId = urlParams.get('dashboard');
@@ -179,6 +208,16 @@ function App() {
       const sessionEmail = urlParams.get('session_email');
       const sessionPassword = urlParams.get('session_password');
       const sessionPreviewId = urlParams.get('session_preview_id');
+      
+      console.log('📊 Parámetros detectados:', {
+        previewId,
+        dashboardId,
+        testMode,
+        sessionEmail,
+        sessionPassword,
+        sessionPreviewId,
+        paymentSuccess: urlParams.get('payment_success')
+      });
       
       if (testMode === 'airtable') {
         console.log('🧪 Modo de prueba de Airtable activado');
@@ -885,15 +924,26 @@ function App() {
   const handlePaymentSuccess = async () => {
     try {
       console.log('💳 Procesando pago exitoso...');
+      console.log('📱 User Agent:', navigator.userAgent);
+      console.log('📱 Es móvil:', /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
       
       // Show payment success loading screen
       setShowPaymentSuccessLoading(true);
       
       // Check if user has an active session in localStorage
-      const storedSession = localStorage.getItem('user_session');
+      let storedSession = localStorage.getItem('user_session');
+      
+      // En móvil, a veces localStorage no está disponible inmediatamente
+      if (!storedSession) {
+        console.log('⚠️ No se encontró sesión inmediatamente, esperando...');
+        await new Promise(resolve => setTimeout(resolve, 500));
+        storedSession = localStorage.getItem('user_session');
+      }
+      
       if (!storedSession) {
         console.log('❌ No hay sesión activa en localStorage');
         alert('No hay sesión activa. Por favor, crea una sesión primero.');
+        setShowPaymentSuccessLoading(false);
         return;
       }
       
@@ -1436,7 +1486,11 @@ function App() {
         isExpired={isDashboardExpired}
         onRenew={() => {
           // Redirigir al link de renovación
-          window.location.href = 'https://buy.stripe.com/5kQ7sL3T51j40m0aoggjC03';
+          // Crear URL de redirección con parámetros de sesión y pago exitoso
+          const currentUrl = window.location.origin + window.location.pathname;
+          const redirectUrl = `${currentUrl}?session_email=${encodeURIComponent(email)}&session_password=${encodeURIComponent('temp_password')}&session_preview_id=${previewSessionId}&payment_success=true`;
+          const stripeUrl = `https://buy.stripe.com/5kQ7sL3T51j40m0aoggjC03?success_url=${encodeURIComponent(redirectUrl)}`;
+          window.location.href = stripeUrl;
         }}
       />
     );
@@ -1491,7 +1545,11 @@ function App() {
         isExpired={isDashboardExpired}
         onRenew={() => {
           // Redirigir al link de renovación
-          window.location.href = 'https://buy.stripe.com/5kQ7sL3T51j40m0aoggjC03';
+          // Crear URL de redirección con parámetros de sesión y pago exitoso
+          const currentUrl = window.location.origin + window.location.pathname;
+          const redirectUrl = `${currentUrl}?session_email=${encodeURIComponent(email)}&session_password=${encodeURIComponent('temp_password')}&session_preview_id=${previewSessionId}&payment_success=true`;
+          const stripeUrl = `https://buy.stripe.com/5kQ7sL3T51j40m0aoggjC03?success_url=${encodeURIComponent(redirectUrl)}`;
+          window.location.href = stripeUrl;
         }}
       />
     );

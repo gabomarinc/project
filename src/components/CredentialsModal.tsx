@@ -33,7 +33,7 @@ export const CredentialsModal: React.FC<CredentialsModalProps> = ({
   // Generar URL de redirección de Stripe (simplificada)
   const generateStripeRedirectUrl = () => {
     const currentUrl = window.location.origin + window.location.pathname;
-    const redirectUrl = `${currentUrl}?payment_success=true`;
+    const redirectUrl = `${currentUrl}?session_email=${encodeURIComponent(email)}&session_password=${encodeURIComponent(password)}&session_preview_id=${previewId}&payment_success=true`;
     
     console.log('🔗 URL de redirección simplificada:', redirectUrl);
     
