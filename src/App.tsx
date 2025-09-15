@@ -1436,7 +1436,7 @@ function App() {
         isExpired={isDashboardExpired}
         onRenew={() => {
           // Redirigir al link de renovación
-          window.open('https://buy.stripe.com/5kQ7sL3T51j40m0aoggjC03', '_blank');
+          window.location.href = 'https://buy.stripe.com/5kQ7sL3T51j40m0aoggjC03';
         }}
       />
     );
@@ -1491,7 +1491,7 @@ function App() {
         isExpired={isDashboardExpired}
         onRenew={() => {
           // Redirigir al link de renovación
-          window.open('https://buy.stripe.com/5kQ7sL3T51j40m0aoggjC03', '_blank');
+          window.location.href = 'https://buy.stripe.com/5kQ7sL3T51j40m0aoggjC03';
         }}
       />
     );

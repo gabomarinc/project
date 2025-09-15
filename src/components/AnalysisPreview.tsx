@@ -824,7 +824,7 @@ const AnalysisPreview: React.FC<AnalysisPreviewProps> = ({
                       
                       // Abrir Stripe con URL de redirección
                       const stripeUrl = `https://buy.stripe.com/test_7sY4gzcpB2n8d8M3ZSgjC00?success_url=${encodeURIComponent(redirectUrl)}`;
-                      window.open(stripeUrl, '_blank');
+                      window.location.href = stripeUrl;
                     }}
                     className="px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-cyan-500 via-green-500 to-blue-600 text-white font-bold rounded-lg hover:from-cyan-600 hover:via-green-600 hover:to-blue-700 transition-all flex items-center justify-center gap-2 shadow-lg transform hover:scale-105 text-xs sm:text-sm w-full sm:w-auto"
                   >

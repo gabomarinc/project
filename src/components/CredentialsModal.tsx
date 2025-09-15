@@ -137,7 +137,7 @@ export const CredentialsModal: React.FC<CredentialsModalProps> = ({
           {/* Payment Button */}
           <div className="space-y-3">
             <button
-              onClick={() => window.open(generateStripeRedirectUrl(), '_blank')}
+              onClick={() => window.location.href = generateStripeRedirectUrl()}
               className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white font-semibold py-3 px-6 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg hover:from-blue-600 hover:to-purple-600 hover:scale-105"
             >
               💳 Completar Pago €5

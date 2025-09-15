@@ -138,7 +138,8 @@ const DomainChecker: React.FC<DomainCheckerProps> = ({ brandNames }) => {
               key={variation.domain}
               className="p-4 rounded-lg border border-gray-600 bg-gray-700/20 hover:border-gray-500 transition-all duration-300"
             >
-              <div className="flex items-center justify-between">
+              {/* Desktop Layout - Botón a la derecha */}
+              <div className="hidden sm:flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Globe className="w-4 h-4 text-lime-400" />
                   <div>
@@ -151,12 +152,33 @@ const DomainChecker: React.FC<DomainCheckerProps> = ({ brandNames }) => {
                 
                 <button
                   onClick={() => handleCheckDomain(variation.domain)}
-                  className="px-2 sm:px-4 py-2 bg-gradient-to-r from-cyan-500 via-green-500 to-blue-600 text-white text-xs sm:text-sm font-medium rounded-lg hover:shadow-lg transition-all duration-300 flex items-center gap-1 sm:gap-2 min-w-0 flex-shrink-0"
+                  className="px-4 py-2 bg-gradient-to-r from-cyan-500 via-green-500 to-blue-600 text-white text-sm font-medium rounded-lg hover:shadow-lg transition-all duration-300 flex items-center gap-2"
                 >
-                  <Search className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                  <span className="hidden xs:inline">Ver disponibilidad</span>
-                  <span className="xs:hidden">Verificar</span>
+                  <Search className="w-4 h-4" />
+                  Ver disponibilidad
                 </button>
+              </div>
+
+              {/* Mobile Layout - Botón debajo */}
+              <div className="sm:hidden">
+                <div className="flex items-start gap-3">
+                  <Globe className="w-4 h-4 text-lime-400 mt-1 flex-shrink-0" />
+                  <div className="flex-1">
+                    <div className="font-medium text-white">{variation.domain}</div>
+                    <div className={`text-sm ${getDomainTypeColor(variation.type)} mb-3`}>
+                      {variation.type}
+                    </div>
+                    
+                    <button
+                      onClick={() => handleCheckDomain(variation.domain)}
+                      className="px-3 py-2 bg-gradient-to-r from-cyan-500 via-green-500 to-blue-600 text-white text-xs font-medium rounded-lg hover:shadow-lg transition-all duration-300 flex items-center gap-2"
+                    >
+                      <Search className="w-3 h-3" />
+                      <span className="hidden xs:inline">Ver disponibilidad</span>
+                      <span className="xs:hidden">Verificar</span>
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           ))}
@@ -172,15 +194,21 @@ const DomainChecker: React.FC<DomainCheckerProps> = ({ brandNames }) => {
 
       {/* Modal de buscadores */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 max-w-md w-full">
+        <div 
+          className="fixed inset-0 bg-black/70 flex items-center justify-center z-[9999] p-4"
+          onClick={() => setShowModal(false)}
+        >
+          <div 
+            className="bg-gray-800 border border-gray-700 rounded-xl p-6 max-w-md w-full shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-semibold text-white">Verificar Dominio</h3>
               <button
                 onClick={() => setShowModal(false)}
-                className="text-gray-400 hover:text-white transition-colors"
+                className="text-gray-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-gray-700"
               >
-                <X className="w-5 h-5" />
+                <X className="w-6 h-6" />
               </button>
             </div>
             
