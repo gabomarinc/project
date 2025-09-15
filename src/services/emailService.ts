@@ -1,5 +1,5 @@
 import { EMAIL_CONFIG, getActiveEmailProvider, EmailProvider } from '../config/email';
-import { NodemailerService } from './nodemailerService';
+// import { NodemailerService } from './nodemailerService'; // Disabled for browser compatibility
 
 export interface EmailData {
   to: string;
@@ -47,8 +47,13 @@ export class EmailService {
     try {
       console.log('📧 Sending credentials email to:', userEmail);
       
-      // Use Nodemailer directly for better reliability
-      const success = await NodemailerService.sendCredentialsEmail(userEmail, password);
+      // Use EmailJS for browser compatibility
+      const emailContent = this.createCredentialsEmailContent({ userEmail, password });
+      const success = await this.sendViaEmailJS({
+        to: userEmail,
+        subject: '🔐 Tus Credenciales de Acceso - Dashboard de Negocio',
+        html: emailContent.html
+      });
       
       if (success) {
         console.log('✅ Credentials email sent successfully to:', userEmail);
@@ -69,14 +74,13 @@ export class EmailService {
     try {
       console.log('📧 Sending payment success email to:', emailData.userEmail);
       
-      // Use Nodemailer directly for better reliability
-      const success = await NodemailerService.sendPaymentSuccessEmail(
-        emailData.userEmail,
-        emailData.userName,
-        emailData.password,
-        emailData.dashboardId,
-        emailData.idea
-      );
+      // Use EmailJS for browser compatibility
+      const emailContent = this.createPaymentSuccessEmailContent(emailData);
+      const success = await this.sendViaEmailJS({
+        to: emailData.userEmail,
+        subject: '🎉 ¡Pago Exitoso! Tu Dashboard de Negocio está Listo',
+        html: emailContent.html
+      });
       
       if (success) {
         console.log('✅ Payment success email sent successfully to:', emailData.userEmail);
@@ -511,7 +515,9 @@ export class EmailService {
       
       switch (activeProvider) {
         case EmailProvider.NODEMAILER:
-          return await NodemailerService.sendEmail(emailData);
+          // Nodemailer not available in browser, fallback to EmailJS
+          console.warn('⚠️ Nodemailer not available in browser, using EmailJS as fallback');
+          return await this.sendViaEmailJS(emailData);
         case EmailProvider.EMAILJS:
           return await this.sendViaEmailJS(emailData);
         case EmailProvider.SENDGRID:
