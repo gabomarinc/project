@@ -195,11 +195,11 @@ const DomainChecker: React.FC<DomainCheckerProps> = ({ brandNames }) => {
       {/* Modal de buscadores */}
       {showModal && (
         <div 
-          className="fixed inset-0 bg-black/70 flex items-center justify-center z-[9999] p-4"
+          className="fixed inset-0 bg-black/70 flex items-center justify-center z-[99999] p-4"
           onClick={() => setShowModal(false)}
         >
           <div 
-            className="bg-gray-800 border border-gray-700 rounded-xl p-6 max-w-md w-full shadow-2xl"
+            className="bg-gray-800 border border-gray-700 rounded-xl p-6 max-w-md w-full shadow-2xl relative z-[99999]"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
