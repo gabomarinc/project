@@ -49,6 +49,7 @@ export const EMAIL_TEMPLATES = {
 
 // Email service providers
 export enum EmailProvider {
+  NODEMAILER = 'nodemailer',
   EMAILJS = 'emailjs',
   SENDGRID = 'sendgrid',
   AWS_SES = 'aws_ses',
@@ -57,13 +58,6 @@ export enum EmailProvider {
 
 // Get the active email provider
 export const getActiveEmailProvider = (): EmailProvider => {
-  if (EMAIL_CONFIG.SENDGRID.API_KEY) {
-    return EmailProvider.SENDGRID;
-  } else if (EMAIL_CONFIG.AWS_SES.ACCESS_KEY_ID) {
-    return EmailProvider.AWS_SES;
-  } else if (EMAIL_CONFIG.EMAILJS.SERVICE_ID !== 'default_service') {
-    return EmailProvider.EMAILJS;
-  } else {
-    return EmailProvider.MOCK;
-  }
+  // Nodemailer is always available (uses Gmail SMTP)
+  return EmailProvider.NODEMAILER;
 };

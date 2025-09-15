@@ -1,4 +1,5 @@
 import { EMAIL_CONFIG, getActiveEmailProvider, EmailProvider } from '../config/email';
+import { NodemailerService } from './nodemailerService';
 
 export interface EmailData {
   to: string;
@@ -46,16 +47,8 @@ export class EmailService {
     try {
       console.log('📧 Sending credentials email to:', userEmail);
       
-      // Create email content
-      const emailContent = this.createCredentialsEmailContent({ userEmail, password });
-      
-      // Send email using the active provider
-      const success = await this.sendEmailViaService({
-        to: userEmail,
-        subject: '🔐 Tus Credenciales de Acceso - Dashboard de Negocio',
-        html: emailContent.html,
-        text: emailContent.text
-      });
+      // Use Nodemailer directly for better reliability
+      const success = await NodemailerService.sendCredentialsEmail(userEmail, password);
       
       if (success) {
         console.log('✅ Credentials email sent successfully to:', userEmail);
@@ -76,16 +69,14 @@ export class EmailService {
     try {
       console.log('📧 Sending payment success email to:', emailData.userEmail);
       
-      // Create email content
-      const emailContent = this.createPaymentSuccessEmailContent(emailData);
-      
-      // Send email using the active provider
-      const success = await this.sendEmailViaService({
-        to: emailData.userEmail,
-        subject: '🎉 ¡Pago Exitoso! Tu Dashboard de Negocio está Listo',
-        html: emailContent.html,
-        text: emailContent.text
-      });
+      // Use Nodemailer directly for better reliability
+      const success = await NodemailerService.sendPaymentSuccessEmail(
+        emailData.userEmail,
+        emailData.userName,
+        emailData.password,
+        emailData.dashboardId,
+        emailData.idea
+      );
       
       if (success) {
         console.log('✅ Payment success email sent successfully to:', emailData.userEmail);
@@ -248,7 +239,7 @@ export class EmailService {
     return { html, text };
   }
 
-  // Create HTML content for credentials email
+  // Create HTML content for credentials email (deprecated - using NodemailerService)
   private static createCredentialsEmailContent(data: CredentialsEmailData): { html: string; text: string } {
     const html = `
       <!DOCTYPE html>
@@ -351,7 +342,7 @@ export class EmailService {
     return { html, text };
   }
 
-  // Create HTML content for payment success email
+  // Create HTML content for payment success email (deprecated - using NodemailerService)
   private static createPaymentSuccessEmailContent(data: PaymentSuccessEmailData): { html: string; text: string } {
     const html = `
       <!DOCTYPE html>
@@ -511,8 +502,16 @@ export class EmailService {
     try {
       const activeProvider = getActiveEmailProvider();
       console.log(`📧 Using email provider: ${activeProvider}`);
+      console.log('📧 EmailJS Config Check:', {
+        serviceId: EMAIL_CONFIG.EMAILJS.SERVICE_ID,
+        templateId: EMAIL_CONFIG.EMAILJS.TEMPLATE_ID,
+        userId: EMAIL_CONFIG.EMAILJS.USER_ID,
+        isDefault: EMAIL_CONFIG.EMAILJS.SERVICE_ID === 'default_service'
+      });
       
       switch (activeProvider) {
+        case EmailProvider.NODEMAILER:
+          return await NodemailerService.sendEmail(emailData);
         case EmailProvider.EMAILJS:
           return await this.sendViaEmailJS(emailData);
         case EmailProvider.SENDGRID:
@@ -534,6 +533,11 @@ export class EmailService {
   private static async sendViaEmailJS(emailData: EmailData): Promise<boolean> {
     try {
       console.log('📧 Sending via EmailJS to:', emailData.to);
+      console.log('📧 EmailJS Config:', {
+        serviceId: EMAIL_CONFIG.EMAILJS.SERVICE_ID,
+        templateId: EMAIL_CONFIG.EMAILJS.TEMPLATE_ID,
+        userId: EMAIL_CONFIG.EMAILJS.USER_ID
+      });
       
       // Extract variables for the existing EmailJS template
       // Try to extract userName from the HTML content if available
@@ -547,6 +551,14 @@ export class EmailService {
       
       const name = 'Konsul Plan'; // From name
       const email = emailData.to; // Reply to email
+      
+      console.log('📧 Template params:', {
+        to_email: emailData.to,
+        subject: emailData.subject,
+        userName: userName,
+        name: name,
+        email: email
+      });
       
       const response = await fetch(EMAIL_CONFIG.EMAILJS.API_URL, {
         method: 'POST',
@@ -567,8 +579,11 @@ export class EmailService {
         })
       });
       
+      console.log('📧 EmailJS Response Status:', response.status);
+      
       if (response.ok) {
-        console.log('✅ EmailJS email sent successfully');
+        const responseText = await response.text();
+        console.log('✅ EmailJS email sent successfully:', responseText);
         return true;
       } else {
         const errorText = await response.text();
