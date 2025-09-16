@@ -74,21 +74,51 @@ export class AIService {
           try {
             console.log('🚀 Starting two-step AI process with Gemini...');
             console.log('📊 Input data:', data);
+
+            // TEMPORARY: Use fallback content for production debugging
+            console.log('🔧 Using fallback content for production debugging...');
+            return {
+              businessSummary: `Análisis de negocio para: ${data.idea}. Este es un análisis generado automáticamente que incluye un resumen del negocio, tamaño del mercado, sugerencias de marca y herramientas recomendadas.`,
+              marketSize: 'Mercado en crecimiento con potencial significativo',
+              brandSuggestions: ['Marca Innovadora', 'Marca Pro', 'Marca Plus'],
+              brandReasoning: ['Nombre memorable y fácil de pronunciar', 'Refleja la innovación del producto', 'Posicionamiento premium'],
+              recommendedTools: [
+                { category: 'Desarrollo', items: [{ name: 'React', description: 'Framework frontend' }] },
+                { category: 'Marketing', items: [{ name: 'Google Ads', description: 'Publicidad online' }] }
+              ],
+              actionPlan: [
+                'Definir propuesta de valor única',
+                'Realizar investigación de mercado',
+                'Desarrollar MVP',
+                'Lanzar beta con usuarios piloto',
+                'Iterar basado en feedback',
+                'Escalar operaciones',
+                'Optimizar procesos'
+              ],
+              marketResearch: {
+                targetAudience: data.idealUser,
+                competitors: data.alternatives,
+                researchMethods: ['Encuestas online', 'Entrevistas', 'Análisis de competencia']
+              }
+            };
       
+      // TEMPORARY: Commented out Gemini calls for debugging
+      /*
       // Step 1: Deep Analysis (70% of progress)
       console.log('📝 Step 1: Calling performDeepAnalysis...');
       const deepAnalysis = await this.performDeepAnalysis(data);
       console.log('✅ Deep analysis completed:', deepAnalysis);
-      
-             // Step 2: Dashboard Content Creation (30% of progress)
-       console.log('🔄 Step 2: Calling createDashboardContent...');
-       const dashboardContent = await this.createDashboardContent(deepAnalysis, data);
-       console.log('✅ Dashboard content created:', dashboardContent);
-       console.log('🔍 Dashboard brand suggestions:', dashboardContent.brandSuggestions);
-       console.log('🔍 Dashboard brand reasoning:', dashboardContent.brandReasoning);
-       console.log('🔍 Brand reasoning length:', dashboardContent.brandReasoning?.length);
-       
-       return dashboardContent;
+
+      // Step 2: Dashboard Content Creation (30% of progress)
+      console.log('🔄 Step 2: Calling createDashboardContent...');
+      const dashboardContent = await this.createDashboardContent(deepAnalysis, data);
+      console.log('✅ Dashboard content created:', dashboardContent);
+      console.log('🔍 Dashboard brand suggestions:', dashboardContent.brandSuggestions);
+      console.log('🔍 Dashboard brand reasoning:', dashboardContent.brandReasoning);
+      console.log('🔍 Brand reasoning length:', dashboardContent.brandReasoning?.length);
+
+      return dashboardContent;
+      */
     } catch (error) {
       console.error('❌ Error in two-step AI process:', error);
       console.log('🔄 Using fallback content...');
