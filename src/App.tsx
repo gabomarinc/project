@@ -290,53 +290,50 @@ function App() {
         console.log('💳 Detección tardía de pago exitoso en móvil...');
         handlePaymentSuccess();
         
-        // Si viene de un pago exitoso y tiene return_to_preview, abrir el preview automáticamente
-        const returnToPreview = urlParams.get('return_to_preview');
-        if (returnToPreview === 'true') {
-          console.log('🔄 Redirigiendo de vuelta al preview después del pago...');
+        // SIEMPRE abrir el preview después de un pago exitoso
+        console.log('🔄 Abriendo preview después del pago exitoso...');
+        
+        // Buscar preview ID en localStorage o usar el de la URL
+        const storedPreviewId = localStorage.getItem('previewSessionId');
+        const urlPreviewId = urlParams.get('session_preview_id');
+        const previewIdToUse = urlPreviewId || storedPreviewId;
+        
+        if (previewIdToUse) {
+          console.log('🔍 Usando preview ID:', previewIdToUse);
+          setPreviewSessionId(previewIdToUse);
           
-          // Buscar preview ID en localStorage o usar el de la URL
-          const storedPreviewId = localStorage.getItem('previewSessionId');
-          const urlPreviewId = urlParams.get('session_preview_id');
-          const previewIdToUse = urlPreviewId || storedPreviewId;
-          
-          if (previewIdToUse) {
-            console.log('🔍 Usando preview ID:', previewIdToUse);
-            setPreviewSessionId(previewIdToUse);
-            
-            // Cargar datos del dashboard
-            try {
-              const result = await AirtableService.getDashboardById(previewIdToUse);
-              if (result.success && result.data) {
-                console.log('✅ Dashboard cargado desde Airtable:', result.data);
-                setDashboardAIContent(result.data);
-                setShowPreview(true);
-              } else {
-                console.log('⚠️ No se pudo cargar el dashboard, usando datos locales...');
-                // Usar datos locales si no se puede cargar desde Airtable
-                const localData = localStorage.getItem('dashboardData');
-                if (localData) {
-                  setDashboardAIContent(JSON.parse(localData));
-                  setShowPreview(true);
-                }
-              }
-            } catch (error) {
-              console.error('❌ Error cargando dashboard:', error);
-              // Usar datos locales como fallback
+          // Cargar datos del dashboard
+          try {
+            const result = await AirtableService.getDashboardById(previewIdToUse);
+            if (result.success && result.data) {
+              console.log('✅ Dashboard cargado desde Airtable:', result.data);
+              setDashboardAIContent(result.data);
+              setShowPreview(true);
+            } else {
+              console.log('⚠️ No se pudo cargar el dashboard, usando datos locales...');
+              // Usar datos locales si no se puede cargar desde Airtable
               const localData = localStorage.getItem('dashboardData');
               if (localData) {
                 setDashboardAIContent(JSON.parse(localData));
                 setShowPreview(true);
               }
             }
-          } else {
-            console.log('⚠️ No se encontró preview ID, abriendo preview con datos locales...');
-            // Usar datos locales si no hay preview ID
+          } catch (error) {
+            console.error('❌ Error cargando dashboard:', error);
+            // Usar datos locales como fallback
             const localData = localStorage.getItem('dashboardData');
             if (localData) {
               setDashboardAIContent(JSON.parse(localData));
               setShowPreview(true);
             }
+          }
+        } else {
+          console.log('⚠️ No se encontró preview ID, abriendo preview con datos locales...');
+          // Usar datos locales si no hay preview ID
+          const localData = localStorage.getItem('dashboardData');
+          if (localData) {
+            setDashboardAIContent(JSON.parse(localData));
+            setShowPreview(true);
           }
         }
       }
@@ -391,53 +388,50 @@ function App() {
         console.log('💳 Usuario regresando de pago exitoso, validando sesión...');
         await handlePaymentSuccess();
         
-        // Si viene de un pago exitoso y tiene return_to_preview, abrir el preview automáticamente
-        const returnToPreview = urlParams.get('return_to_preview');
-        if (returnToPreview === 'true') {
-          console.log('🔄 Redirigiendo de vuelta al preview después del pago...');
+        // SIEMPRE abrir el preview después de un pago exitoso
+        console.log('🔄 Abriendo preview después del pago exitoso...');
+        
+        // Buscar preview ID en localStorage o usar el de la URL
+        const storedPreviewId = localStorage.getItem('previewSessionId');
+        const urlPreviewId = urlParams.get('session_preview_id');
+        const previewIdToUse = urlPreviewId || storedPreviewId;
+        
+        if (previewIdToUse) {
+          console.log('🔍 Usando preview ID:', previewIdToUse);
+          setPreviewSessionId(previewIdToUse);
           
-          // Buscar preview ID en localStorage o usar el de la URL
-          const storedPreviewId = localStorage.getItem('previewSessionId');
-          const urlPreviewId = urlParams.get('session_preview_id');
-          const previewIdToUse = urlPreviewId || storedPreviewId;
-          
-          if (previewIdToUse) {
-            console.log('🔍 Usando preview ID:', previewIdToUse);
-            setPreviewSessionId(previewIdToUse);
-            
-            // Cargar datos del dashboard
-            try {
-              const result = await AirtableService.getDashboardById(previewIdToUse);
-              if (result.success && result.data) {
-                console.log('✅ Dashboard cargado desde Airtable:', result.data);
-                setDashboardAIContent(result.data);
-                setShowPreview(true);
-              } else {
-                console.log('⚠️ No se pudo cargar el dashboard, usando datos locales...');
-                // Usar datos locales si no se puede cargar desde Airtable
-                const localData = localStorage.getItem('dashboardData');
-                if (localData) {
-                  setDashboardAIContent(JSON.parse(localData));
-                  setShowPreview(true);
-                }
-              }
-            } catch (error) {
-              console.error('❌ Error cargando dashboard:', error);
-              // Usar datos locales como fallback
+          // Cargar datos del dashboard
+          try {
+            const result = await AirtableService.getDashboardById(previewIdToUse);
+            if (result.success && result.data) {
+              console.log('✅ Dashboard cargado desde Airtable:', result.data);
+              setDashboardAIContent(result.data);
+              setShowPreview(true);
+            } else {
+              console.log('⚠️ No se pudo cargar el dashboard, usando datos locales...');
+              // Usar datos locales si no se puede cargar desde Airtable
               const localData = localStorage.getItem('dashboardData');
               if (localData) {
                 setDashboardAIContent(JSON.parse(localData));
                 setShowPreview(true);
               }
             }
-          } else {
-            console.log('⚠️ No se encontró preview ID, abriendo preview con datos locales...');
-            // Usar datos locales si no hay preview ID
+          } catch (error) {
+            console.error('❌ Error cargando dashboard:', error);
+            // Usar datos locales como fallback
             const localData = localStorage.getItem('dashboardData');
             if (localData) {
               setDashboardAIContent(JSON.parse(localData));
               setShowPreview(true);
             }
+          }
+        } else {
+          console.log('⚠️ No se encontró preview ID, abriendo preview con datos locales...');
+          // Usar datos locales si no hay preview ID
+          const localData = localStorage.getItem('dashboardData');
+          if (localData) {
+            setDashboardAIContent(JSON.parse(localData));
+            setShowPreview(true);
           }
         }
         return;
