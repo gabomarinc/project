@@ -369,48 +369,28 @@ function App() {
       });
       
       if (paymentSuccess === 'true') {
-        console.log('🚨 PAGO EXITOSO DETECTADO - FORZANDO APERTURA DEL PREVIEW!');
+        console.log('🚨 PAGO EXITOSO DETECTADO - SOLUCIÓN SIMPLE!');
         
         // FORZAR desbloqueo inmediato
         setIsDashboardUnlocked(true);
         setShowPaymentSuccessLoading(false);
         
-        // BUSCAR PREVIEW ID Y REDIRIGIR SI ES NECESARIO
+        // SOLUCIÓN SIMPLE: SIEMPRE USAR LOCALSTORAGE
         const storedPreviewId = localStorage.getItem('previewSessionId');
-        const urlPreviewId = urlParams.get('session_preview_id');
-        const previewIdToUse = urlPreviewId || storedPreviewId;
+        console.log('💾 Preview ID desde localStorage:', storedPreviewId);
         
-        console.log('🔍 Preview IDs encontrados:', {
-          stored: storedPreviewId,
-          url: urlPreviewId,
-          using: previewIdToUse
-        });
-        
-        // SI NO HAY PREVIEW ID EN LA URL PERO SÍ EN LOCALSTORAGE, REDIRIGIR
-        if (!urlPreviewId && storedPreviewId) {
-          console.log('🔄 REDIRIGIENDO CON PREVIEW ID DESDE LOCALSTORAGE...');
-          const newUrl = `${window.location.origin}${window.location.pathname}?session_email=${urlParams.get('session_email') || 'user@example.com'}&session_password=${urlParams.get('session_password') || 'temp_password'}&session_preview_id=${storedPreviewId}&payment_success=true&return_to_preview=true`;
-          console.log('🔗 Nueva URL con preview ID:', newUrl);
-          window.history.replaceState({}, '', newUrl);
-          // Recargar la página con la URL correcta
-          window.location.reload();
-          return;
-        }
-        
-        // CONSULTAR AIRTABLE DIRECTAMENTE
-        console.log('🔍 CONSULTANDO AIRTABLE DIRECTAMENTE...');
-        console.log('🔍 Preview ID para consultar:', previewIdToUse);
-        
-        if (previewIdToUse) {
-          console.log('📡 Cargando datos desde Airtable con ID:', previewIdToUse);
+        if (storedPreviewId) {
+          console.log('✅ USANDO PREVIEW ID DESDE LOCALSTORAGE:', storedPreviewId);
+          
+          // CARGAR DATOS DESDE AIRTABLE CON EL ID GUARDADO
           try {
-            const result = await AirtableService.getDashboardById(previewIdToUse);
+            const result = await AirtableService.getDashboardById(storedPreviewId);
             console.log('📊 Resultado de Airtable:', result);
             
-            if (result.success && result.dashboard) {
-              console.log('✅ DATOS CARGADOS DESDE AIRTABLE:', result.dashboard?.dashboard_data);
-              setDashboardAIContent(result.dashboard?.dashboard_data);
-              setAiPreviewContent(result.dashboard?.dashboard_data);
+            if (result.success && result.dashboard?.dashboard_data) {
+              console.log('✅ DATOS CARGADOS DESDE AIRTABLE:', result.dashboard.dashboard_data);
+              setDashboardAIContent(result.dashboard.dashboard_data);
+              setAiPreviewContent(result.dashboard.dashboard_data);
             } else {
               console.log('⚠️ No se encontraron datos en Airtable, usando fallback...');
               // Usar datos de localStorage como fallback
@@ -420,19 +400,6 @@ function App() {
                 console.log('✅ Usando datos locales como fallback:', parsedData);
                 setDashboardAIContent(parsedData);
                 setAiPreviewContent(parsedData);
-              } else {
-                console.log('❌ No hay datos en ningún lado, usando contenido por defecto...');
-                // Contenido por defecto
-                const defaultContent = {
-                  executiveSummary: 'Análisis ejecutivo profundo de tu idea de negocio con insights estratégicos personalizados.',
-                  strongPoint: 'Validación prometedora de tu enfoque basada en análisis de mercado y tendencias actuales.',
-                  criticalRisks: ['Riesgo de competencia', 'Cambios en el mercado', 'Regulaciones emergentes'],
-                  actionableRecommendation: 'Desarrollar un MVP robusto y validar con usuarios reales antes del lanzamiento completo.',
-                  brandSuggestions: ['Marca Innovadora', 'Marca Pro', 'Marca Plus', 'Marca Elite', 'Marca Vision'],
-                  brandReasoning: ['Nombre memorable y fácil de pronunciar', 'Refleja la innovación del producto', 'Posicionamiento premium']
-                };
-                setDashboardAIContent(defaultContent);
-                setAiPreviewContent(defaultContent);
               }
             }
           } catch (error) {
@@ -445,39 +412,24 @@ function App() {
               setAiPreviewContent(parsedData);
             }
           }
+          
+          // CONFIGURAR PREVIEW ID
+          setPreviewSessionId(storedPreviewId);
+          
+          // FORZAR apertura del preview
+          console.log('🔄 FORZANDO apertura del preview...');
+          setShowPreview(true);
+          
+          // También forzar el estado de pago exitoso
+          setIsPaymentRegistered(true);
+          
+          return; // Salir temprano
         } else {
-          console.log('⚠️ No hay preview ID, usando datos locales...');
-          const localData = localStorage.getItem('dashboardData');
-          if (localData) {
-            const parsedData = JSON.parse(localData);
-            setDashboardAIContent(parsedData);
-            setAiPreviewContent(parsedData);
-          }
+          console.log('❌ NO HAY PREVIEW ID EN LOCALSTORAGE!');
+          // Mostrar mensaje de error
+          alert('Error: No se encontró el ID del preview. Por favor, genera un nuevo preview e intenta de nuevo.');
+          return;
         }
-        
-        // Buscar preview ID
-        const storedPreviewId2 = localStorage.getItem('previewSessionId');
-        const urlPreviewId2 = urlParams.get('session_preview_id');
-        const previewIdToUse2 = urlPreviewId2 || storedPreviewId2;
-        
-        console.log('🔍 Preview IDs:', {
-          stored: storedPreviewId2,
-          url: urlPreviewId2,
-          using: previewIdToUse2
-        });
-        
-        if (previewIdToUse2) {
-          setPreviewSessionId(previewIdToUse2);
-        }
-        
-        // FORZAR apertura del preview
-        console.log('🔄 FORZANDO apertura del preview...');
-        setShowPreview(true);
-        
-        // También forzar el estado de pago exitoso
-        setIsPaymentRegistered(true);
-        
-        return; // Salir temprano
       }
     };
     
