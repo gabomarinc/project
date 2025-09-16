@@ -408,7 +408,7 @@ function App() {
       setShowPreview(true);
       
       // También forzar el estado de pago exitoso
-      setPaymentSuccess(true);
+      setIsPaymentRegistered(true);
       
       return; // Salir temprano
     }
