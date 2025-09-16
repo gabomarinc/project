@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Payment Detection</title>
+</head>
+<body>
+    <h1>Test de Detección de Pago</h1>
+    
+    <h2>Simular URL con pago exitoso:</h2>
+    <button onclick="testPaymentSuccess()">Simular Pago Exitoso</button>
+    
+    <h2>Simular URL sin pago:</h2>
+    <button onclick="testNoPayment()">Simular Sin Pago</button>
+    
+    <h2>Resultado:</h2>
+    <div id="result"></div>
+
+    <script>
+        function testPaymentSuccess() {
+            // Simular URL con payment_success=true
+            const url = new URL(window.location.href);
+            url.searchParams.set('payment_success', 'true');
+            url.searchParams.set('session_email', 'test@example.com');
+            url.searchParams.set('session_preview_id', 'test123');
+            
+            window.history.pushState({}, '', url);
+            
+            // Simular la detección
+            const urlParams = new URLSearchParams(window.location.search);
+            const paymentSuccess = urlParams.get('payment_success');
+            
+            document.getElementById('result').innerHTML = `
+                <p><strong>URL:</strong> ${window.location.href}</p>
+                <p><strong>payment_success:</strong> ${paymentSuccess}</p>
+                <p><strong>Resultado:</strong> ${paymentSuccess === 'true' ? '✅ PAGO DETECTADO' : '❌ NO PAGO'}</p>
+            `;
+        }
+        
+        function testNoPayment() {
+            // Simular URL sin payment_success
+            const url = new URL(window.location.href);
+            url.searchParams.delete('payment_success');
+            
+            window.history.pushState({}, '', url);
+            
+            // Simular la detección
+            const urlParams = new URLSearchParams(window.location.search);
+            const paymentSuccess = urlParams.get('payment_success');
+            
+            document.getElementById('result').innerHTML = `
+                <p><strong>URL:</strong> ${window.location.href}</p>
+                <p><strong>payment_success:</strong> ${paymentSuccess}</p>
+                <p><strong>Resultado:</strong> ${paymentSuccess === 'true' ? '✅ PAGO DETECTADO' : '❌ NO PAGO'}</p>
+            `;
+        }
+    </script>
+</body>
+</html>
