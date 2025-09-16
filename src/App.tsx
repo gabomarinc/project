@@ -894,10 +894,14 @@ function App() {
         console.log('📋 Preview result dashboard:', previewResult.dashboard);
         
         if (previewResult.success && previewResult.dashboard) {
-          setPreviewSessionId(previewResult.dashboard.dashboard_id);
+          const previewId = previewResult.dashboard.dashboard_id;
+          setPreviewSessionId(previewId);
+          // GUARDAR EN LOCALSTORAGE PARA PERSISTENCIA
+          localStorage.setItem('previewSessionId', previewId);
           // Set initial unlock status - new previews are always locked
           setIsDashboardUnlocked(false);
-          console.log('✅ Preview session saved successfully:', previewResult.dashboard.dashboard_id);
+          console.log('✅ Preview session saved successfully:', previewId);
+          console.log('💾 Preview ID saved to localStorage:', previewId);
           console.log('🔒 Initial dashboard unlock status: false (new preview)');
         } else {
           console.error('❌ Failed to save preview session:', previewResult.error);
@@ -951,10 +955,14 @@ function App() {
         console.log('📋 Fallback preview result received:', previewResult);
         
         if (previewResult.success && previewResult.dashboard) {
-          setPreviewSessionId(previewResult.dashboard.dashboard_id);
+          const previewId = previewResult.dashboard.dashboard_id;
+          setPreviewSessionId(previewId);
+          // GUARDAR EN LOCALSTORAGE PARA PERSISTENCIA
+          localStorage.setItem('previewSessionId', previewId);
           // Set initial unlock status - new previews are always locked
           setIsDashboardUnlocked(false);
-          console.log('✅ Fallback preview session saved successfully:', previewResult.dashboard.dashboard_id);
+          console.log('✅ Fallback preview session saved successfully:', previewId);
+          console.log('💾 Fallback Preview ID saved to localStorage:', previewId);
           console.log('🔒 Initial dashboard unlock status: false (fallback preview)');
         } else {
           console.error('❌ Failed to save fallback preview session:', previewResult.error);

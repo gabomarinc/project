@@ -818,15 +818,29 @@ const AnalysisPreview: React.FC<AnalysisPreviewProps> = ({
                   </div>
                   <button
                     onClick={() => {
-                      // DEBUG: Verificar previewSessionId
+                      // DEBUG: Verificar previewSessionId desde múltiples fuentes
                       console.log('🚨 DEBUGGING STRIPE REDIRECT:');
-                      console.log('🔍 previewSessionId:', previewSessionId);
+                      console.log('🔍 previewSessionId prop:', previewSessionId);
                       console.log('🔍 previewSessionId type:', typeof previewSessionId);
                       console.log('🔍 previewSessionId length:', previewSessionId?.length);
                       
+                      // INTENTAR OBTENER EL ID DESDE LOCALSTORAGE SI NO ESTÁ DISPONIBLE
+                      const storedPreviewId = localStorage.getItem('previewSessionId');
+                      console.log('💾 storedPreviewId from localStorage:', storedPreviewId);
+                      
+                      // USAR EL ID DISPONIBLE (prop o localStorage)
+                      const finalPreviewId = previewSessionId || storedPreviewId;
+                      console.log('✅ finalPreviewId to use:', finalPreviewId);
+                      
+                      if (!finalPreviewId) {
+                        console.error('❌ NO HAY PREVIEW ID DISPONIBLE!');
+                        alert('Error: No se encontró el ID del preview. Por favor, recarga la página e intenta de nuevo.');
+                        return;
+                      }
+                      
                       // Crear URL de redirección con parámetros de sesión y pago exitoso
                       const currentUrl = window.location.origin + window.location.pathname;
-                      const redirectUrl = `${currentUrl}?session_email=${encodeURIComponent(userInputs.idea.split(' ')[0] + '@example.com')}&session_password=${encodeURIComponent('temp_password')}&session_preview_id=${previewSessionId}&payment_success=true&return_to_preview=true`;
+                      const redirectUrl = `${currentUrl}?session_email=${encodeURIComponent(userInputs.idea.split(' ')[0] + '@example.com')}&session_password=${encodeURIComponent('temp_password')}&session_preview_id=${finalPreviewId}&payment_success=true&return_to_preview=true`;
                       
                       console.log('🔗 redirectUrl:', redirectUrl);
                       
