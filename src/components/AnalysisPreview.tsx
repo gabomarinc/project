@@ -820,7 +820,7 @@ const AnalysisPreview: React.FC<AnalysisPreviewProps> = ({
                     onClick={() => {
                       // Crear URL de redirección con parámetros de sesión y pago exitoso
                       const currentUrl = window.location.origin + window.location.pathname;
-                      const redirectUrl = `${currentUrl}?session_email=${encodeURIComponent(userInputs.idea.split(' ')[0] + '@example.com')}&session_password=${encodeURIComponent('temp_password')}&session_preview_id=${previewSessionId}&payment_success=true`;
+                      const redirectUrl = `${currentUrl}?session_email=${encodeURIComponent(userInputs.idea.split(' ')[0] + '@example.com')}&session_password=${encodeURIComponent('temp_password')}&session_preview_id=${previewSessionId}&payment_success=true&return_to_preview=true`;
                       
                       // Abrir Stripe con URL de redirección
                       const stripeUrl = `https://buy.stripe.com/test_7sY4gzcpB2n8d8M3ZSgjC00?success_url=${encodeURIComponent(redirectUrl)}`;

@@ -289,6 +289,16 @@ function App() {
       if (paymentSuccess === 'true') {
         console.log('💳 Detección tardía de pago exitoso en móvil...');
         handlePaymentSuccess();
+        
+        // Si viene de un pago exitoso y tiene return_to_preview, abrir el preview automáticamente
+        const returnToPreview = urlParams.get('return_to_preview');
+        if (returnToPreview === 'true') {
+          console.log('🔄 Redirigiendo de vuelta al preview después del pago...');
+          // Pequeño delay para asegurar que el estado se actualice
+          setTimeout(() => {
+            setShowPreview(true);
+          }, 1000);
+        }
       }
     };
 
@@ -340,6 +350,16 @@ function App() {
       if (paymentSuccess === 'true') {
         console.log('💳 Usuario regresando de pago exitoso, validando sesión...');
         await handlePaymentSuccess();
+        
+        // Si viene de un pago exitoso y tiene return_to_preview, abrir el preview automáticamente
+        const returnToPreview = urlParams.get('return_to_preview');
+        if (returnToPreview === 'true') {
+          console.log('🔄 Redirigiendo de vuelta al preview después del pago...');
+          // Pequeño delay para asegurar que el estado se actualice
+          setTimeout(() => {
+            setShowPreview(true);
+          }, 1000);
+        }
         return;
       }
       
@@ -1405,7 +1425,7 @@ function App() {
           // Redirigir al link de renovación
           // Crear URL de redirección con parámetros de sesión y pago exitoso
           const currentUrl = window.location.origin + window.location.pathname;
-          const redirectUrl = `${currentUrl}?session_email=${encodeURIComponent(email)}&session_password=${encodeURIComponent('temp_password')}&session_preview_id=${previewSessionId}&payment_success=true`;
+          const redirectUrl = `${currentUrl}?session_email=${encodeURIComponent(email)}&session_password=${encodeURIComponent('temp_password')}&session_preview_id=${previewSessionId}&payment_success=true&return_to_preview=true`;
           const stripeUrl = `https://buy.stripe.com/5kQ7sL3T51j40m0aoggjC03?success_url=${encodeURIComponent(redirectUrl)}`;
           window.location.href = stripeUrl;
         }}
@@ -1464,7 +1484,7 @@ function App() {
           // Redirigir al link de renovación
           // Crear URL de redirección con parámetros de sesión y pago exitoso
           const currentUrl = window.location.origin + window.location.pathname;
-          const redirectUrl = `${currentUrl}?session_email=${encodeURIComponent(email)}&session_password=${encodeURIComponent('temp_password')}&session_preview_id=${previewSessionId}&payment_success=true`;
+          const redirectUrl = `${currentUrl}?session_email=${encodeURIComponent(email)}&session_password=${encodeURIComponent('temp_password')}&session_preview_id=${previewSessionId}&payment_success=true&return_to_preview=true`;
           const stripeUrl = `https://buy.stripe.com/5kQ7sL3T51j40m0aoggjC03?success_url=${encodeURIComponent(redirectUrl)}`;
           window.location.href = stripeUrl;
         }}
