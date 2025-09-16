@@ -1291,9 +1291,6 @@ const Dashboard: React.FC<DashboardProps> = ({ name, email, idea, problem, ideal
 
   const updateStepNote = (stepIndex: number, note: string) => {
     console.log('📝 updateStepNote called with stepIndex:', stepIndex, 'note:', note);
-    console.log('📊 Current completedSteps:', completedSteps);
-    console.log('📝 Current stepNotes:', stepNotes);
-    console.log('🆔 previewSessionId:', previewSessionId);
     
     const newStepNotes = {
       ...stepNotes,
@@ -1303,24 +1300,42 @@ const Dashboard: React.FC<DashboardProps> = ({ name, email, idea, problem, ideal
     console.log('🔄 New stepNotes:', newStepNotes);
     setStepNotes(newStepNotes);
     
-    // Save to Airtable
+    // Note: We don't save to Airtable automatically anymore
+    // User must click "Guardar" button to save notes
+  };
+
+  // Save notes to Airtable manually
+  const saveNotesToAirtable = async () => {
     const currentDashboardId = dashboardId || previewSessionId;
-    if (currentDashboardId) {
-      console.log('💾 Attempting to save notes to Airtable with ID:', currentDashboardId);
-      AirtableService.saveCompletedSteps(currentDashboardId, completedSteps, newStepNotes)
-        .then(result => {
-          console.log('📤 Airtable response for notes:', result);
-          if (result.success) {
-            console.log('✅ Step notes saved to Airtable');
-          } else {
-            console.error('❌ Error saving step notes:', result.error);
-          }
-        })
-        .catch(error => {
-          console.error('❌ Error saving step notes:', error);
-        });
-    } else {
+    if (!currentDashboardId) {
       console.error('❌ No dashboard ID available for saving notes');
+      return;
+    }
+
+    console.log('💾 Saving notes to Airtable with ID:', currentDashboardId);
+    console.log('📝 Notes to save:', stepNotes);
+    
+    try {
+      const result = await AirtableService.saveCompletedSteps(currentDashboardId, completedSteps, stepNotes);
+      console.log('📤 Airtable response for notes:', result);
+      
+      if (result.success) {
+        console.log('✅ Step notes saved to Airtable');
+        // Show success message
+        setMotivationMessage('✅ Notas guardadas exitosamente');
+        setShowMotivation(true);
+        setTimeout(() => setShowMotivation(false), 3000);
+      } else {
+        console.error('❌ Error saving step notes:', result.error);
+        setMotivationMessage('❌ Error al guardar las notas');
+        setShowMotivation(true);
+        setTimeout(() => setShowMotivation(false), 3000);
+      }
+    } catch (error) {
+      console.error('❌ Error saving step notes:', error);
+      setMotivationMessage('❌ Error al guardar las notas');
+      setShowMotivation(true);
+      setTimeout(() => setShowMotivation(false), 3000);
     }
   };
 
@@ -3679,7 +3694,7 @@ const Dashboard: React.FC<DashboardProps> = ({ name, email, idea, problem, ideal
                 <h2 className="text-xl font-semibold text-white">Plan de Acción Personalizado</h2>
               </div>
               <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 sm:ml-auto">
-                <span className="text-sm text-gray-400 order-2 sm:order-1">
+                <span className="text-sm text-gray-400 order-3 sm:order-1">
                   {completedSteps.length}/7 completados
                   {completedSteps.length > 0 && (
                     <span className="ml-2 text-cyan-400">
@@ -3687,10 +3702,23 @@ const Dashboard: React.FC<DashboardProps> = ({ name, email, idea, problem, ideal
                     </span>
                   )}
                 </span>
+                
+                {/* Guardar Button */}
+                <button
+                  onClick={saveNotesToAirtable}
+                  className="px-2 sm:px-4 py-2 bg-gradient-to-r from-cyan-500 via-green-500 to-blue-600 text-white text-xs sm:text-sm font-medium rounded-lg hover:shadow-lg transition-all duration-300 flex items-center gap-1 sm:gap-2 min-w-0 flex-shrink-0 order-1 sm:order-2"
+                >
+                  <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                  </svg>
+                  <span className="hidden xs:inline">Guardar</span>
+                  <span className="xs:hidden">💾</span>
+                </button>
+                
                 <button
                   onClick={sendFollowUpEmail}
                   disabled={isGeneratingContent || !aiContent}
-                  className={`flex items-center justify-center gap-2 px-3 sm:px-4 py-2 border rounded-lg text-xs sm:text-sm transition-all duration-300 order-1 sm:order-2 ${
+                  className={`flex items-center justify-center gap-2 px-3 sm:px-4 py-2 border rounded-lg text-xs sm:text-sm transition-all duration-300 order-2 sm:order-3 ${
                     isGeneratingContent || !aiContent
                       ? 'bg-gray-600/30 text-gray-400 border-gray-500/30 cursor-not-allowed'
                       : 'bg-blue-500/20 text-blue-400 border-blue-500/30 hover:bg-blue-500/30'
@@ -3823,7 +3851,7 @@ const Dashboard: React.FC<DashboardProps> = ({ name, email, idea, problem, ideal
                           />
                           {stepNotes[index] && (
                             <div className="mt-2 text-xs text-gray-400">
-                              💡 Nota guardada automáticamente
+                              💡 Nota pendiente de guardar
                             </div>
                           )}
                         </div>
@@ -4247,7 +4275,19 @@ const Dashboard: React.FC<DashboardProps> = ({ name, email, idea, problem, ideal
                   </div>
                 </div>
                 
-                <div className="flex items-center justify-center lg:justify-end">
+                <div className="flex flex-col sm:flex-row items-center gap-3 lg:justify-end">
+                  {/* Guardar Button */}
+                  <button
+                    onClick={saveNotesToAirtable}
+                    className="px-3 sm:px-4 py-2 bg-gradient-to-r from-cyan-500 via-green-500 to-blue-600 text-white text-sm font-medium rounded-lg hover:shadow-lg transition-all duration-300 flex items-center gap-2 min-w-0 flex-shrink-0"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                    </svg>
+                    <span className="hidden sm:inline">Guardar Notas</span>
+                    <span className="sm:hidden">💾 Guardar</span>
+                  </button>
+                  
                   <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-xl p-4 text-center lg:text-right">
                     <div className="text-2xl lg:text-3xl font-bold text-cyan-400 mb-1">
                       {Math.round((completedSteps.length / bitacoraSteps.length) * 100)}%
@@ -4440,7 +4480,7 @@ const Dashboard: React.FC<DashboardProps> = ({ name, email, idea, problem, ideal
                             />
                             {stepNotes[index] && (
                               <div className="mt-2 text-xs text-gray-400">
-                                💡 Nota guardada automáticamente
+                                💡 Nota pendiente de guardar
                               </div>
                             )}
                           </div>
