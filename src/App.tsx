@@ -375,14 +375,30 @@ function App() {
         setIsDashboardUnlocked(true);
         setShowPaymentSuccessLoading(false);
         
-        // CONSULTAR AIRTABLE DIRECTAMENTE - NO USAR LOCALSTORAGE
-        console.log('🔍 CONSULTANDO AIRTABLE DIRECTAMENTE...');
-        
-        // Buscar preview ID primero
+        // BUSCAR PREVIEW ID Y REDIRIGIR SI ES NECESARIO
         const storedPreviewId = localStorage.getItem('previewSessionId');
         const urlPreviewId = urlParams.get('session_preview_id');
         const previewIdToUse = urlPreviewId || storedPreviewId;
         
+        console.log('🔍 Preview IDs encontrados:', {
+          stored: storedPreviewId,
+          url: urlPreviewId,
+          using: previewIdToUse
+        });
+        
+        // SI NO HAY PREVIEW ID EN LA URL PERO SÍ EN LOCALSTORAGE, REDIRIGIR
+        if (!urlPreviewId && storedPreviewId) {
+          console.log('🔄 REDIRIGIENDO CON PREVIEW ID DESDE LOCALSTORAGE...');
+          const newUrl = `${window.location.origin}${window.location.pathname}?session_email=${urlParams.get('session_email') || 'user@example.com'}&session_password=${urlParams.get('session_password') || 'temp_password'}&session_preview_id=${storedPreviewId}&payment_success=true&return_to_preview=true`;
+          console.log('🔗 Nueva URL con preview ID:', newUrl);
+          window.history.replaceState({}, '', newUrl);
+          // Recargar la página con la URL correcta
+          window.location.reload();
+          return;
+        }
+        
+        // CONSULTAR AIRTABLE DIRECTAMENTE
+        console.log('🔍 CONSULTANDO AIRTABLE DIRECTAMENTE...');
         console.log('🔍 Preview ID para consultar:', previewIdToUse);
         
         if (previewIdToUse) {
