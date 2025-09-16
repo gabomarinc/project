@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   ArrowLeft, 
   Building2, 
@@ -16,7 +16,6 @@ import {
   Check,
   FileText,
   Play,
-  User,
   BookOpen,
   Users,
   Target,

@@ -11,7 +11,6 @@ import { AIService } from './services/aiService';
 import { getWorkingModel } from './config/ai';
 import { AirtableService } from './services/airtableService';
 import { EmailService } from './services/emailService';
-import { safeObjectKeys } from './utils/safeObjectUtils';
 import jsPDF from 'jspdf';
 
 function App() {
@@ -306,9 +305,9 @@ function App() {
           // Cargar datos del dashboard
           try {
             const result = await AirtableService.getDashboardById(previewIdToUse);
-            if (result.success && result.data) {
-              console.log('✅ Dashboard cargado desde Airtable:', result.data);
-              setDashboardAIContent(result.data);
+            if (result.success && result.dashboard?.dashboard_data) {
+              console.log('✅ Dashboard cargado desde Airtable:', result.dashboard?.dashboard_data);
+              setDashboardAIContent(result.dashboard?.dashboard_data);
               setShowPreview(true);
             } else {
               console.log('⚠️ No se pudo cargar el dashboard, usando datos locales...');
@@ -392,10 +391,10 @@ function App() {
             const result = await AirtableService.getDashboardById(previewIdToUse);
             console.log('📊 Resultado de Airtable:', result);
             
-            if (result.success && result.data) {
-              console.log('✅ DATOS CARGADOS DESDE AIRTABLE:', result.data);
-              setDashboardAIContent(result.data);
-              setAiPreviewContent(result.data);
+            if (result.success && result.dashboard) {
+              console.log('✅ DATOS CARGADOS DESDE AIRTABLE:', result.dashboard?.dashboard_data);
+              setDashboardAIContent(result.dashboard?.dashboard_data);
+              setAiPreviewContent(result.dashboard?.dashboard_data);
             } else {
               console.log('⚠️ No se encontraron datos en Airtable, usando fallback...');
               // Usar datos de localStorage como fallback
@@ -518,9 +517,9 @@ function App() {
           // Cargar datos del dashboard
           try {
             const result = await AirtableService.getDashboardById(previewIdToUse);
-            if (result.success && result.data) {
-              console.log('✅ Dashboard cargado desde Airtable:', result.data);
-              setDashboardAIContent(result.data);
+            if (result.success && result.dashboard?.dashboard_data) {
+              console.log('✅ Dashboard cargado desde Airtable:', result.dashboard?.dashboard_data);
+              setDashboardAIContent(result.dashboard?.dashboard_data);
               setShowPreview(true);
             } else {
               console.log('⚠️ No se pudo cargar el dashboard, usando datos locales...');
@@ -566,9 +565,9 @@ function App() {
             // Parse dashboard data
             let dashboardData;
             try {
-              dashboardData = typeof result.dashboard.dashboard_data === 'string' 
-                ? JSON.parse(result.dashboard.dashboard_data)
-                : result.dashboard.dashboard_data;
+              dashboardData = typeof result.dashboard?.dashboard_data === 'string' 
+                ? JSON.parse(result.dashboard?.dashboard_data)
+                : result.dashboard?.dashboard_data;
             } catch (parseError) {
               console.error('❌ Error parsing dashboard data:', parseError);
               dashboardData = {
@@ -681,12 +680,12 @@ function App() {
             let dashboardData;
             try {
               console.log('🔍 Parsing dashboard data from Airtable:');
-              console.log('📊 Raw dashboard_data type:', typeof result.dashboard.dashboard_data);
-              console.log('📊 Raw dashboard_data sample:', result.dashboard.dashboard_data?.substring(0, 200));
+              console.log('📊 Raw dashboard_data type:', typeof result.dashboard?.dashboard_data);
+              console.log('📊 Raw dashboard_data sample:', result.dashboard?.dashboard_data?.substring(0, 200));
               
-              dashboardData = typeof result.dashboard.dashboard_data === 'string' 
-                ? JSON.parse(result.dashboard.dashboard_data)
-                : result.dashboard.dashboard_data;
+              dashboardData = typeof result.dashboard?.dashboard_data === 'string' 
+                ? JSON.parse(result.dashboard?.dashboard_data)
+                : result.dashboard?.dashboard_data;
                 
               console.log('✅ Dashboard data parsed successfully:');
               console.log('📊 Parsed dashboard_data type:', typeof dashboardData);
@@ -1013,9 +1012,9 @@ function App() {
         // Parse dashboard data
         let dashboardData;
         try {
-          dashboardData = typeof result.dashboard.dashboard_data === 'string' 
-            ? JSON.parse(result.dashboard.dashboard_data)
-            : result.dashboard.dashboard_data;
+          dashboardData = typeof result.dashboard?.dashboard_data === 'string' 
+            ? JSON.parse(result.dashboard?.dashboard_data)
+            : result.dashboard?.dashboard_data;
         } catch (parseError) {
           console.error('❌ Error parsing dashboard data:', parseError);
           dashboardData = null;
@@ -1179,65 +1178,6 @@ function App() {
     console.log('✅ Modal cerrado, usuario logueado, dashboard desbloqueado');
   };
 
-  // Load real preview data from Airtable
-  const loadRealPreviewData = async (previewId: string) => {
-    try {
-      console.log('📊 Cargando datos reales del preview desde Airtable...');
-      
-      // Get the preview record from Airtable
-      const previewRecord = await AirtableService.getPreviewRecord(previewId);
-      
-      if (previewRecord && previewRecord.dashboard_data) {
-        console.log('✅ Datos del preview encontrados en Airtable');
-        
-        // Parse the dashboard data
-        const dashboardData = JSON.parse(previewRecord.dashboard_data);
-        console.log('📊 Dashboard data cargada:', dashboardData);
-        
-        // Set the AI preview content with real data
-        setAiPreviewContent({
-          executiveSummary: dashboardData.executiveSummary || '',
-          strongPoint: dashboardData.strongPoint || '',
-          criticalRisks: dashboardData.criticalRisks || [],
-          actionableRecommendation: dashboardData.actionableRecommendation || '',
-          brandSuggestions: dashboardData.brandSuggestions || '',
-          brandReasoning: dashboardData.brandReasoning || [],
-          intelligentlySearched: dashboardData.intelligentlySearched || false,
-          searchQueries: dashboardData.searchQueries || [],
-          externalData: {
-            marketSize: dashboardData.marketSize || {
-              totalAddressableMarket: '',
-              serviceableAddressableMarket: '',
-              serviceableObtainableMarket: ''
-            },
-            competitors: dashboardData.competitors || [],
-            trends: dashboardData.trends || [],
-            insights: dashboardData.insights || {
-              strategicRecommendations: []
-            },
-            marketTrends: dashboardData.marketTrends || []
-          }
-        });
-
-        // Also load the form data from the preview record (only if fields exist)
-        // Note: Some fields may not exist in Airtable, so we check for them
-        if (previewRecord.business_idea) setIdea(previewRecord.business_idea);
-        // problem, ideal_user, alternatives fields don't exist in Airtable, so we skip them
-        if (previewRecord.region) setRegion(previewRecord.region);
-        if (previewRecord.business_model) setBusinessModel(previewRecord.business_model);
-        if (previewRecord.project_type) setProjectType(previewRecord.project_type);
-        
-        console.log('✅ Datos reales del preview cargados exitosamente');
-        return true;
-      } else {
-        console.log('⚠️ No se encontraron datos del preview en Airtable, generando nuevo contenido...');
-        return false;
-      }
-    } catch (error) {
-      console.error('❌ Error cargando datos reales del preview:', error);
-      return false;
-    }
-  };
 
 
   const handleExportPDF = async () => {
@@ -1272,7 +1212,7 @@ function App() {
         const lines = pdf.splitTextToSize(cleanText, maxWidth);
         
         let currentY = y;
-        lines.forEach((line: string, index: number) => {
+        lines.forEach((line: string) => {
           // Check if we need a new page before adding the line
           if (currentY + 6 > pageHeight - 30) {
             pdf.addPage();
@@ -1346,7 +1286,7 @@ function App() {
         
         // Add content
         if (Array.isArray(content)) {
-          content.forEach((item, index) => {
+          content.forEach((item) => {
             if (currentY > pageHeight - 30) {
               pdf.addPage();
               currentY = margin;
