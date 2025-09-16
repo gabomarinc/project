@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { X, CheckCircle, ArrowRight, Building2, Tag, AlertTriangle, BarChart3, Rocket, Shield, Star, Search } from 'lucide-react';
 import ExpirationMessage from './ExpirationMessage';
 

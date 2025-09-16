@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAirtableDashboard } from './hooks/useAirtableDashboard';
 import { Rocket } from 'lucide-react';
 import Dashboard from './components/Dashboard';
