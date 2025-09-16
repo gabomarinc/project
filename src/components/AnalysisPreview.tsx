@@ -818,12 +818,21 @@ const AnalysisPreview: React.FC<AnalysisPreviewProps> = ({
                   </div>
                   <button
                     onClick={() => {
+                      // DEBUG: Verificar previewSessionId
+                      console.log('🚨 DEBUGGING STRIPE REDIRECT:');
+                      console.log('🔍 previewSessionId:', previewSessionId);
+                      console.log('🔍 previewSessionId type:', typeof previewSessionId);
+                      console.log('🔍 previewSessionId length:', previewSessionId?.length);
+                      
                       // Crear URL de redirección con parámetros de sesión y pago exitoso
                       const currentUrl = window.location.origin + window.location.pathname;
                       const redirectUrl = `${currentUrl}?session_email=${encodeURIComponent(userInputs.idea.split(' ')[0] + '@example.com')}&session_password=${encodeURIComponent('temp_password')}&session_preview_id=${previewSessionId}&payment_success=true&return_to_preview=true`;
                       
+                      console.log('🔗 redirectUrl:', redirectUrl);
+                      
                       // Abrir Stripe con URL de redirección
                       const stripeUrl = `https://buy.stripe.com/test_7sY4gzcpB2n8d8M3ZSgjC00?success_url=${encodeURIComponent(redirectUrl)}`;
+                      console.log('💳 stripeUrl:', stripeUrl);
                       window.location.href = stripeUrl;
                     }}
                     className="px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-cyan-500 via-green-500 to-blue-600 text-white font-bold rounded-lg hover:from-cyan-600 hover:via-green-600 hover:to-blue-700 transition-all flex items-center justify-center gap-2 shadow-lg transform hover:scale-105 text-xs sm:text-sm w-full sm:w-auto"
