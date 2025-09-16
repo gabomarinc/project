@@ -2,9 +2,9 @@
 // Note: Airtable now uses Personal Access Tokens (PATs) with Bearer authentication
 // Your token should start with 'pat' (Personal Access Token)
 export const AIRTABLE_CONFIG = {
-  PERSONAL_ACCESS_TOKEN: 'pateQ54vtA6JFAAyN.fca739fac3390851f60d85713590549737ca7ec7cf27ad087c67ae18a02f01be', // Your Personal Access Token
-  BASE_ID: 'appHgGF7B9ojxqRnA', // Your Airtable Base ID
-  TABLE_NAME: 'Dashboards', // Your table name
+  PERSONAL_ACCESS_TOKEN: import.meta.env.VITE_AIRTABLE_PERSONAL_ACCESS_TOKEN || 'pateQ54vtA6JFAAyN.fca739fac3390851f60d85713590549737ca7ec7cf27ad087c67ae18a02f01be', // Your Personal Access Token
+  BASE_ID: import.meta.env.VITE_AIRTABLE_BASE_ID || 'appHgGF7B9ojxqRnA', // Your Airtable Base ID
+  TABLE_NAME: import.meta.env.VITE_AIRTABLE_TABLE_NAME || 'Dashboards', // Your table name
   VIEW_NAME: 'Grid view' // Your view name
 };
 
