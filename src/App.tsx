@@ -370,6 +370,8 @@ function App() {
       
       if (paymentSuccess === 'true') {
         console.log('🚨 PAGO EXITOSO DETECTADO - SOLUCIÓN SIMPLE!');
+        console.log('🕐 Timestamp:', new Date().toISOString());
+        console.log('🌐 User Agent:', navigator.userAgent);
         
         // FORZAR desbloqueo inmediato
         setIsDashboardUnlocked(true);
