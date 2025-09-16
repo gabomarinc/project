@@ -199,11 +199,12 @@ function App() {
             setIsDashboardUnlocked(true);
             
             // Try to load real preview data from Airtable first
+            let dashboardData = null;
             try {
               const dashboardResult = await AirtableService.getDashboardById(sessionData.previewId);
               
               if (dashboardResult.success && dashboardResult.dashboard) {
-                const dashboardData = dashboardResult.dashboard.dashboard_data;
+                dashboardData = dashboardResult.dashboard.dashboard_data;
                 console.log('📊 Dashboard data loaded from Airtable:', dashboardData);
                 setDashboardAIContent(dashboardData);
               }
