@@ -668,11 +668,11 @@ function App() {
               console.log('📊 Parsed dashboard_data keys:', dashboardData && typeof dashboardData === 'object' ? Object.keys(dashboardData) : 'N/A');
             } catch (parseError) {
               console.error('❌ Error parsing dashboard data:', parseError);
-              dashboardData = {
-                executiveSummary: 'Error al cargar el dashboard',
-                strongPoint: 'No se pudo cargar el contenido',
-                criticalRisks: ['Error de carga'],
-                actionableRecommendation: 'Recarga la página'
+                dashboardData = {
+                  executiveSummary: 'Error al cargar el dashboard',
+                  strongPoint: 'No se pudo cargar el contenido',
+                  criticalRisks: ['Error de carga'],
+                  actionableRecommendation: 'Recarga la página'
               };
             }
             
