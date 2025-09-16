@@ -354,6 +354,43 @@ function App() {
     };
   }, [handlePaymentSuccess]);
 
+  // DETECCIÓN INMEDIATA DE PAGO EXITOSO - ANTES QUE TODO
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentSuccess = urlParams.get('payment_success');
+    
+    if (paymentSuccess === 'true') {
+      console.log('🚨 PAGO EXITOSO DETECTADO INMEDIATAMENTE!');
+      
+      // Desbloquear dashboard inmediatamente
+      setIsDashboardUnlocked(true);
+      setShowPaymentSuccessLoading(false);
+      
+      // Buscar datos en localStorage
+      const localData = localStorage.getItem('dashboardData');
+      if (localData) {
+        console.log('✅ Cargando datos locales...');
+        setDashboardAIContent(JSON.parse(localData));
+      }
+      
+      // Buscar preview ID
+      const storedPreviewId = localStorage.getItem('previewSessionId');
+      const urlPreviewId = urlParams.get('session_preview_id');
+      const previewIdToUse = urlPreviewId || storedPreviewId;
+      
+      if (previewIdToUse) {
+        console.log('✅ Usando preview ID:', previewIdToUse);
+        setPreviewSessionId(previewIdToUse);
+      }
+      
+      // ABRIR PREVIEW INMEDIATAMENTE
+      console.log('🔄 Abriendo preview inmediatamente...');
+      setShowPreview(true);
+      
+      return; // Salir temprano
+    }
+  }, []); // Solo ejecutar una vez al montar
+
   // Load preview or dashboard from URL on component mount
   useEffect(() => {
     const loadFromUrl = async () => {
