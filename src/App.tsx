@@ -366,26 +366,55 @@ function App() {
       setIsDashboardUnlocked(true);
       setShowPaymentSuccessLoading(false);
       
-      // Buscar datos en localStorage
-      const localData = localStorage.getItem('dashboardData');
-      if (localData) {
-        console.log('✅ Cargando datos locales...');
-        setDashboardAIContent(JSON.parse(localData));
-      }
-      
-      // Buscar preview ID
+      // Buscar preview ID PRIMERO
       const storedPreviewId = localStorage.getItem('previewSessionId');
       const urlPreviewId = urlParams.get('session_preview_id');
       const previewIdToUse = urlPreviewId || storedPreviewId;
       
+      console.log('🔍 Preview IDs encontrados:', {
+        stored: storedPreviewId,
+        url: urlPreviewId,
+        using: previewIdToUse
+      });
+      
       if (previewIdToUse) {
         console.log('✅ Usando preview ID:', previewIdToUse);
         setPreviewSessionId(previewIdToUse);
+        
+        // Intentar cargar desde Airtable PRIMERO
+        AirtableService.getDashboardById(previewIdToUse).then(result => {
+          if (result.success && result.data) {
+            console.log('✅ Dashboard cargado desde Airtable');
+            setDashboardAIContent(result.data);
+            setShowPreview(true);
+          } else {
+            console.log('⚠️ Fallback a datos locales...');
+            const localData = localStorage.getItem('dashboardData');
+            if (localData) {
+              setDashboardAIContent(JSON.parse(localData));
+              setShowPreview(true);
+            } else {
+              console.log('❌ No hay datos disponibles');
+            }
+          }
+        }).catch(error => {
+          console.error('❌ Error cargando desde Airtable:', error);
+          const localData = localStorage.getItem('dashboardData');
+          if (localData) {
+            setDashboardAIContent(JSON.parse(localData));
+            setShowPreview(true);
+          }
+        });
+      } else {
+        console.log('⚠️ No hay preview ID, usando datos locales...');
+        const localData = localStorage.getItem('dashboardData');
+        if (localData) {
+          setDashboardAIContent(JSON.parse(localData));
+          setShowPreview(true);
+        } else {
+          console.log('❌ No hay datos disponibles en localStorage');
+        }
       }
-      
-      // ABRIR PREVIEW INMEDIATAMENTE
-      console.log('🔄 Abriendo preview inmediatamente...');
-      setShowPreview(true);
       
       return; // Salir temprano
     }
