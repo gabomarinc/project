@@ -1,6 +1,30 @@
 import { CompetitiveIntelligence } from './externalDataService';
 import { model, getWorkingModel } from '../config/ai';
 
+// AI Proxy function for secure API calls
+async function callAIProxy(prompt: string, idea: string): Promise<string> {
+  try {
+    const response = await fetch('/api/ai-proxy', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ prompt, idea })
+    });
+
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || 'AI Proxy error');
+    }
+
+    return data.content;
+  } catch (error) {
+    console.error('AI Proxy Error:', error);
+    throw error;
+  }
+}
+
 
 
 export interface BusinessData {
@@ -37,6 +61,52 @@ export interface GeneratedContent {
 }
 
 export class AIService {
+  // Generate business content using AI Proxy (for production)
+  static async generateBusinessContentWithProxy(data: BusinessData): Promise<GeneratedContent> {
+    try {
+      console.log('🔒 Generating content with AI Proxy...');
+      
+      const prompt = `Analiza esta idea de negocio y genera un plan completo:
+
+Idea: ${data.idea}
+Problema: ${data.problem}
+Usuario ideal: ${data.idealUser}
+Región: ${data.region}
+Alternativas: ${data.alternatives}
+Modelo de negocio: ${data.businessModel}
+Tipo de proyecto: ${data.projectType}
+
+Genera un análisis completo que incluya:
+1. Resumen del negocio
+2. Tamaño del mercado
+3. Sugerencias de nombres de marca
+4. Herramientas recomendadas
+5. Plan de acción personalizado
+6. Investigación de mercado
+
+Responde en formato JSON estructurado.`;
+
+      const response = await callAIProxy(prompt, data.idea);
+      
+      // Parse the JSON response
+      const parsedResponse = JSON.parse(response);
+      
+      return {
+        businessSummary: parsedResponse.businessSummary || 'Análisis generado por IA',
+        marketSize: parsedResponse.marketSize || 'Mercado en crecimiento',
+        brandSuggestions: parsedResponse.brandSuggestions || ['Marca 1', 'Marca 2', 'Marca 3'],
+        brandReasoning: parsedResponse.brandReasoning || ['Razón 1', 'Razón 2', 'Razón 3'],
+        recommendedTools: parsedResponse.recommendedTools || [],
+        actionPlan: parsedResponse.actionPlan || ['Paso 1', 'Paso 2', 'Paso 3'],
+        marketResearch: parsedResponse.marketResearch || {}
+      };
+      
+    } catch (error) {
+      console.error('❌ Error in AI Proxy:', error);
+      throw error;
+    }
+  }
+
   // Test method to verify AI connection
   static async testAIConnection(): Promise<boolean> {
     try {
@@ -73,6 +143,14 @@ export class AIService {
     try {
       console.log('🚀 Starting two-step AI process in generateBusinessContent...');
       console.log('📊 Input data:', data);
+      
+      // Check if we should use AI Proxy (for production)
+      const useProxy = !import.meta.env.VITE_OPENAI_API_KEY;
+      
+      if (useProxy) {
+        console.log('🔒 Using AI Proxy for secure API calls...');
+        return await this.generateBusinessContentWithProxy(data);
+      }
       
       // Step 1: Deep Analysis (70% of progress)
       console.log('📝 Step 1: Calling performDeepAnalysis...');
