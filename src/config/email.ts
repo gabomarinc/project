@@ -58,6 +58,13 @@ export enum EmailProvider {
 
 // Get the active email provider
 export const getActiveEmailProvider = (): EmailProvider => {
-  // Nodemailer is always available (uses Gmail SMTP)
-  return EmailProvider.NODEMAILER;
+  // Check if we have EmailJS configured
+  if (EMAIL_CONFIG.EMAILJS.SERVICE_ID !== 'default_service' && 
+      EMAIL_CONFIG.EMAILJS.TEMPLATE_ID !== 'default_template' && 
+      EMAIL_CONFIG.EMAILJS.USER_ID !== 'default_user') {
+    return EmailProvider.EMAILJS;
+  }
+  
+  // Fallback to mock for development
+  return EmailProvider.MOCK;
 };
