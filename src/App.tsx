@@ -387,6 +387,29 @@ function App() {
         } catch (error) {
           console.error('❌ Error parseando datos locales:', error);
         }
+      } else {
+        console.log('⚠️ No hay datos locales, generando contenido de fallback...');
+        // Generar contenido de fallback si no hay datos
+        const fallbackContent = {
+          businessSummary: 'Análisis de negocio generado automáticamente',
+          marketSize: 'Mercado en crecimiento con potencial significativo',
+          brandSuggestions: ['Marca Innovadora', 'Marca Pro', 'Marca Plus'],
+          brandReasoning: ['Nombre memorable y fácil de pronunciar', 'Refleja la innovación del producto'],
+          recommendedTools: [
+            { category: 'Desarrollo', items: [{ name: 'React', description: 'Framework frontend' }] }
+          ],
+          actionPlan: [
+            'Definir propuesta de valor única',
+            'Realizar investigación de mercado',
+            'Desarrollar MVP'
+          ],
+          marketResearch: {
+            targetAudience: 'Usuarios objetivo identificados',
+            competitors: 'Análisis de competencia disponible',
+            researchMethods: ['Encuestas online', 'Entrevistas']
+          }
+        };
+        setDashboardAIContent(fallbackContent);
       }
       
       // Buscar preview ID
