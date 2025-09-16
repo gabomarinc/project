@@ -169,6 +169,116 @@ function App() {
     return () => clearInterval(timer);
   }, []);
 
+  // Handle payment success - check if user has active session
+  const handlePaymentSuccess = useCallback(async () => {
+    try {
+      console.log('💳 Procesando pago exitoso...');
+      console.log('📱 User Agent:', navigator.userAgent);
+      console.log('📱 Es móvil:', /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
+      
+      // Show payment success loading screen
+      setShowPaymentSuccessLoading(true);
+      
+      // Check if user has an active session in localStorage
+      let storedSession = localStorage.getItem('user_session');
+      
+      if (storedSession) {
+        try {
+          const sessionData = JSON.parse(storedSession);
+          console.log('📱 Sesión encontrada en localStorage:', sessionData);
+          
+          // Verify session exists in Airtable
+          const result = await AirtableService.findUserSession(sessionData.email, sessionData.password);
+          
+          if (result.success && result.dashboardId) {
+            console.log('✅ Sesión verificada en Airtable');
+            
+            // Mark session as created and payment as registered
+            setIsSessionCreated(true);
+            setIsPaymentRegistered(true);
+            setIsDashboardUnlocked(true);
+            
+            // Try to load real preview data from Airtable first
+            try {
+              const dashboardResult = await AirtableService.getDashboardById(sessionData.previewId);
+              
+              if (dashboardResult.success && dashboardResult.dashboard) {
+                const dashboardData = dashboardResult.dashboard.dashboard_data;
+                console.log('📊 Dashboard data loaded from Airtable:', dashboardData);
+                setDashboardAIContent(dashboardData);
+              }
+            } catch (error) {
+              console.warn('⚠️ Could not load dashboard data from Airtable:', error);
+            }
+            
+            // Update session with payment info
+            const updatedSession = {
+              ...sessionData,
+              paymentCompleted: true,
+              paymentDate: new Date().toISOString()
+            };
+            localStorage.setItem('user_session', JSON.stringify(updatedSession));
+            
+            // Send payment success email
+            const dashboardUrl = `${window.location.origin}?preview=${sessionData.previewId}`;
+            const emailSent = await EmailService.sendPaymentSuccessEmail({
+              userEmail: sessionData.email,
+              userName: sessionData.email.split('@')[0],
+              dashboardId: sessionData.previewId,
+              password: sessionData.password,
+              idea: dashboardData?.idea || idea || 'Tu idea de negocio',
+              creationDate: new Date().toLocaleDateString('es-ES', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              }),
+              expirationDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('es-ES', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              }),
+              dashboardUrl: dashboardUrl
+            });
+            
+            if (emailSent) {
+              console.log('✅ Email de pago exitoso enviado');
+            } else {
+              console.warn('⚠️ No se pudo enviar el email de pago exitoso');
+            }
+            
+            // Hide loading screen and show dashboard
+            setTimeout(() => {
+              setShowPaymentSuccessLoading(false);
+              setShowDashboard(true);
+              setShowForm(false);
+              setShowLogin(false);
+              
+              // Clear URL parameters
+              const newUrl = window.location.origin + window.location.pathname;
+              window.history.replaceState({}, '', newUrl);
+            }, 2000);
+            
+            return;
+          }
+        } catch (error) {
+          console.error('❌ Error processing stored session:', error);
+        }
+      }
+      
+      // If no valid session, show error
+      console.log('❌ No se encontró sesión válida para el pago');
+      setShowPaymentSuccessLoading(false);
+      setShowForm(true);
+      
+    } catch (error) {
+      console.error('❌ Error in handlePaymentSuccess:', error);
+      setShowPaymentSuccessLoading(false);
+      setShowForm(true);
+    }
+  }, [idea, dashboardAIContent]);
+
   // Listen for URL changes (especially important for mobile)
   useEffect(() => {
     const handleUrlChange = () => {
@@ -195,7 +305,7 @@ function App() {
       window.removeEventListener('popstate', handleUrlChange);
       window.removeEventListener('focus', handleUrlChange);
     };
-  }, []);
+  }, [handlePaymentSuccess]);
 
   // Load preview or dashboard from URL on component mount
   useEffect(() => {
@@ -920,201 +1030,6 @@ function App() {
     }
   };
 
-  // Handle payment success - check if user has active session
-  const handlePaymentSuccess = async () => {
-    try {
-      console.log('💳 Procesando pago exitoso...');
-      console.log('📱 User Agent:', navigator.userAgent);
-      console.log('📱 Es móvil:', /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
-      
-      // Show payment success loading screen
-      setShowPaymentSuccessLoading(true);
-      
-      // Check if user has an active session in localStorage
-      let storedSession = localStorage.getItem('user_session');
-      
-      // En móvil, a veces localStorage no está disponible inmediatamente
-      if (!storedSession) {
-        console.log('⚠️ No se encontró sesión inmediatamente, esperando...');
-        await new Promise(resolve => setTimeout(resolve, 500));
-        storedSession = localStorage.getItem('user_session');
-      }
-      
-      if (!storedSession) {
-        console.log('❌ No hay sesión activa en localStorage');
-        alert('No hay sesión activa. Por favor, crea una sesión primero.');
-        setShowPaymentSuccessLoading(false);
-        return;
-      }
-      
-      const sessionData = JSON.parse(storedSession);
-      console.log('📊 Datos de sesión encontrados:', sessionData);
-      
-      
-      // Verify session with Airtable
-      const result = await AirtableService.verifyUserLogin(sessionData.email, sessionData.password);
-      
-      if (result.success && result.dashboard) {
-        console.log('✅ Sesión verificada, activando dashboard...');
-        
-        
-        // Set user data
-        setEmail(sessionData.email);
-        setName(sessionData.email.split('@')[0]);
-        
-        // Set preview session ID from stored session
-        setPreviewSessionId(sessionData.previewId);
-        
-        // Mark session as created and payment as registered
-        setIsSessionCreated(true);
-        setIsPaymentRegistered(true);
-        setIsDashboardUnlocked(true);
-        
-        // Try to load real preview data from Airtable first
-        console.log('🔄 Intentando cargar datos reales del preview...');
-        const realDataLoaded = await loadRealPreviewData(sessionData.previewId);
-        console.log('📊 Resultado de carga de datos reales:', realDataLoaded);
-        
-        // If real data couldn't be loaded, don't replace with fallback content
-        if (!realDataLoaded) {
-          console.log('⚠️ No se pudieron cargar los datos reales del preview');
-          console.log('🔄 Usando contenido existente sin reemplazar...');
-          
-          // Don't generate new content or replace existing data
-          // Just use whatever content is already available
-          console.log('📊 Contenido actual disponible:', aiPreviewContent);
-        } else {
-          console.log('✅ Datos reales del preview cargados exitosamente');
-        }
-        
-        
-        // Show preview
-        setShowPreview(true);
-        setShowForm(false);
-        
-        // Redirect to the correct preview URL with the preview ID
-        const newUrl = `${window.location.pathname}?preview=${sessionData.previewId}`;
-        window.history.pushState({}, '', newUrl);
-        
-        console.log('✅ Usuario redirigido a preview con sesión activa y pago confirmado');
-        console.log('🔗 URL actualizada:', newUrl);
-        
-        // Force a small delay to ensure all state updates are processed
-        setTimeout(async () => {
-          console.log('🔄 Forzando actualización de datos del preview...');
-          
-          // Force reload preview data to ensure it's displayed
-          try {
-            const result = await AirtableService.getDashboardById(sessionData.previewId);
-            if (result.success && result.dashboard) {
-              console.log('🔄 Recargando datos del preview desde Airtable...');
-              
-              // Parse dashboard data
-              let dashboardData;
-              try {
-                dashboardData = typeof result.dashboard.dashboard_data === 'string' 
-                  ? JSON.parse(result.dashboard.dashboard_data)
-                  : result.dashboard.dashboard_data;
-              } catch (parseError) {
-                console.error('❌ Error parsing dashboard data:', parseError);
-                dashboardData = {
-                  executiveSummary: 'Error al cargar el preview',
-                  strongPoint: 'No se pudo cargar el contenido',
-                  criticalRisks: ['Error de carga'],
-                  actionableRecommendation: 'Recarga la página'
-                };
-              }
-              
-              // Set the preview content
-              setAiPreviewContent(dashboardData);
-              
-              // Set form data from the dashboard record
-              setName(result.dashboard.project_name || '');
-              setEmail(result.dashboard.user_email || '');
-              setIdea(result.dashboard.business_idea || '');
-              setProjectType(result.dashboard.project_type || '');
-              setBusinessModel(result.dashboard.business_model || '');
-              setRegion(result.dashboard.region || '');
-              setProblem(result.dashboard.problem || '');
-              setIdealUser(result.dashboard.ideal_user || '');
-              setAlternatives(result.dashboard.alternatives || '');
-              
-              console.log('✅ Datos del preview recargados exitosamente');
-            }
-          } catch (error) {
-            console.error('❌ Error recargando datos del preview:', error);
-          }
-        }, 500);
-        
-        // Send payment success confirmation email
-        try {
-          console.log('📧 Enviando correo de confirmación de pago exitoso...');
-          
-          // Get dashboard data for email
-          const dashboardResult = await AirtableService.getDashboardById(sessionData.previewId);
-          let dashboardData = null;
-          if (dashboardResult.success && dashboardResult.dashboard) {
-            try {
-              dashboardData = typeof dashboardResult.dashboard.dashboard_data === 'string' 
-                ? JSON.parse(dashboardResult.dashboard.dashboard_data)
-                : dashboardResult.dashboard.dashboard_data;
-            } catch (parseError) {
-              console.error('❌ Error parsing dashboard data for email:', parseError);
-            }
-          }
-          
-          // Calculate expiration date (30 days from now)
-          const expirationDate = new Date();
-          expirationDate.setDate(expirationDate.getDate() + 30);
-          
-          // Send payment success email
-          const dashboardUrl = `${window.location.origin}?preview=${sessionData.previewId}`;
-          const emailSent = await EmailService.sendPaymentSuccessEmail({
-            userEmail: sessionData.email,
-            userName: sessionData.email.split('@')[0],
-            dashboardId: sessionData.previewId,
-            password: sessionData.password,
-            idea: dashboardData?.idea || idea || 'Tu idea de negocio',
-            creationDate: new Date().toLocaleDateString('es-ES', {
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit'
-            }),
-            expirationDate: expirationDate.toLocaleDateString('es-ES', {
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric'
-            }),
-            dashboardUrl: dashboardUrl
-          });
-          
-          if (emailSent) {
-            console.log('✅ Correo de confirmación de pago enviado exitosamente');
-          } else {
-            console.error('❌ Error enviando correo de confirmación de pago');
-          }
-        } catch (emailError) {
-          console.error('❌ Error enviando correo de confirmación:', emailError);
-        }
-        
-        // Hide payment success loading screen
-        setShowPaymentSuccessLoading(false);
-      } else {
-        console.error('❌ Sesión no válida:', result.error);
-        alert('Sesión no válida. Por favor, inicia sesión nuevamente.');
-        localStorage.removeItem('user_session');
-        // Hide loading screen on invalid session
-        setShowPaymentSuccessLoading(false);
-      }
-    } catch (error) {
-      console.error('❌ Error procesando pago exitoso:', error);
-      alert('Error procesando pago. Por favor, intenta de nuevo.');
-      // Hide loading screen on error
-      setShowPaymentSuccessLoading(false);
-    }
-  };
 
   const handleExportPDF = async () => {
     try {
