@@ -1562,24 +1562,7 @@ function App() {
         isExpired={isDashboardExpired}
         onRenew={() => {
           // Redirigir al link de renovación
-          // Crear URL de redirección con parámetros de sesión y pago exitoso
-          console.log('🔍 DEBUG - Valores antes de crear URL de Stripe:');
-          console.log('📧 Email:', email);
-          console.log('🆔 PreviewSessionId:', previewSessionId);
-          console.log('🌐 Current URL:', window.location.href);
-          
-          // Usar finalPreviewId de localStorage como en la versión antigua
-          const finalPreviewId = localStorage.getItem('previewSessionId') || previewSessionId;
-          console.log('🔍 Final Preview ID (de localStorage):', finalPreviewId);
-          
-          const currentUrl = window.location.origin + window.location.pathname;
-          const redirectUrl = `${currentUrl}?payment_success=true&session_preview_id=${finalPreviewId}&return_to_preview=true`;
-          
-          console.log('🔗 Redirect URL:', redirectUrl);
-          console.log('🔗 Stripe URL:', `https://buy.stripe.com/test_7sY4gzcpB2n8d8M3ZSgjC00?success_url=${encodeURIComponent(redirectUrl)}`);
-          
-          const stripeUrl = `https://buy.stripe.com/test_7sY4gzcpB2n8d8M3ZSgjC00?success_url=${encodeURIComponent(redirectUrl)}`;
-          window.location.href = stripeUrl;
+          window.open('https://buy.stripe.com/test_7sY4gzcpB2n8d8M3ZSgjC00', '_blank');
         }}
       />
     );
@@ -1634,24 +1617,7 @@ function App() {
         isExpired={isDashboardExpired}
         onRenew={() => {
           // Redirigir al link de renovación
-          // Crear URL de redirección con parámetros de sesión y pago exitoso
-          console.log('🔍 DEBUG - Valores antes de crear URL de Stripe:');
-          console.log('📧 Email:', email);
-          console.log('🆔 PreviewSessionId:', previewSessionId);
-          console.log('🌐 Current URL:', window.location.href);
-          
-          // Usar finalPreviewId de localStorage como en la versión antigua
-          const finalPreviewId = localStorage.getItem('previewSessionId') || previewSessionId;
-          console.log('🔍 Final Preview ID (de localStorage):', finalPreviewId);
-          
-          const currentUrl = window.location.origin + window.location.pathname;
-          const redirectUrl = `${currentUrl}?payment_success=true&session_preview_id=${finalPreviewId}&return_to_preview=true`;
-          
-          console.log('🔗 Redirect URL:', redirectUrl);
-          console.log('🔗 Stripe URL:', `https://buy.stripe.com/test_7sY4gzcpB2n8d8M3ZSgjC00?success_url=${encodeURIComponent(redirectUrl)}`);
-          
-          const stripeUrl = `https://buy.stripe.com/test_7sY4gzcpB2n8d8M3ZSgjC00?success_url=${encodeURIComponent(redirectUrl)}`;
-          window.location.href = stripeUrl;
+          window.open('https://buy.stripe.com/test_7sY4gzcpB2n8d8M3ZSgjC00', '_blank');
         }}
       />
     );
