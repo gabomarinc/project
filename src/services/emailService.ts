@@ -74,13 +74,8 @@ export class EmailService {
     try {
       console.log('📧 Sending payment success email to:', emailData.userEmail);
       
-      // Use EmailJS for browser compatibility
-      const emailContent = this.createPaymentSuccessEmailContent(emailData);
-      const success = await this.sendViaEmailJS({
-        to: emailData.userEmail,
-        subject: '🎉 ¡Pago Exitoso! Tu Dashboard de Negocio está Listo',
-        html: emailContent.html
-      });
+      // Use EmailJS with specific template for payment success
+      const success = await this.sendPaymentSuccessViaEmailJS(emailData);
       
       if (success) {
         console.log('✅ Payment success email sent successfully to:', emailData.userEmail);
@@ -346,160 +341,6 @@ export class EmailService {
     return { html, text };
   }
 
-  // Create HTML content for payment success email (deprecated - using NodemailerService)
-  private static createPaymentSuccessEmailContent(data: PaymentSuccessEmailData): { html: string; text: string } {
-    const html = `
-      <!DOCTYPE html>
-      <html lang="es">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>¡Pago Exitoso! Dashboard Listo</title>
-        <style>
-          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f8f9fa; }
-          .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-          .header { background: linear-gradient(135deg, #10b981, #f59e0b); padding: 30px; text-align: center; color: white; }
-          .content { padding: 30px; }
-          .success-badge { background: #10b981; color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; display: inline-block; margin-bottom: 20px; }
-          .info-card { background: #f8f9fa; border: 2px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 20px 0; }
-          .info-item { margin: 15px 0; display: flex; justify-content: space-between; align-items: center; }
-          .label { font-weight: 600; color: #374151; }
-          .value { font-family: 'Monaco', 'Menlo', monospace; background: #1f2937; color: #10b981; padding: 8px 12px; border-radius: 4px; word-break: break-all; }
-          .dashboard-id { font-size: 18px; font-weight: bold; color: #1f2937; }
-          .warning { background: #fef3c7; border: 1px solid #f59e0b; border-radius: 6px; padding: 15px; margin: 20px 0; }
-          .expiration { background: #dbeafe; border: 1px solid #3b82f6; border-radius: 6px; padding: 15px; margin: 20px 0; }
-          .button { display: inline-block; background: linear-gradient(135deg, #10b981, #f59e0b); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 20px 0; }
-          .footer { background: #f8f9fa; padding: 20px; text-align: center; color: #6b7280; font-size: 14px; }
-          .idea-highlight { background: linear-gradient(135deg, #10b981, #f59e0b); color: white; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <div class="success-badge">✅ PAGO EXITOSO</div>
-            <h1>🎉 ¡Tu Dashboard está Listo!</h1>
-            <p>Tu plan de negocio personalizado ha sido generado exitosamente</p>
-          </div>
-          
-          <div class="content">
-            <h2>¡Hola ${data.userName}!</h2>
-            <p>¡Excelente noticia! Tu pago ha sido procesado correctamente y tu dashboard de negocio está completamente listo para usar.</p>
-            
-            <div class="idea-highlight">
-              <h3>💡 Tu Idea de Negocio:</h3>
-              <p style="font-size: 18px; margin: 10px 0;"><strong>${data.idea}</strong></p>
-            </div>
-            
-            <div class="info-card">
-              <h3>🔐 Información de Acceso</h3>
-              <div class="info-item">
-                <span class="label">📧 Email:</span>
-                <span class="value">${data.userEmail}</span>
-              </div>
-              <div class="info-item">
-                <span class="label">🔑 Contraseña:</span>
-                <span class="value">${data.password}</span>
-              </div>
-              <div class="info-item">
-                <span class="label">🆔 ID del Dashboard:</span>
-                <span class="dashboard-id">${data.dashboardId}</span>
-              </div>
-            </div>
-            
-            <div class="info-card">
-              <h3>📅 Información del Proyecto</h3>
-              <div class="info-item">
-                <span class="label">📅 Fecha de Creación:</span>
-                <span class="value">${data.creationDate}</span>
-              </div>
-              <div class="info-item">
-                <span class="label">⏰ Fecha de Caducidad:</span>
-                <span class="value">${data.expirationDate}</span>
-              </div>
-            </div>
-            
-            <div class="warning">
-              <strong>⚠️ Importante:</strong> Tu contraseña no se puede recuperar. Guárdala en un lugar seguro para futuros accesos.
-            </div>
-            
-            <div class="expiration">
-              <strong>⏰ Recordatorio:</strong> Tu dashboard estará disponible hasta el ${data.expirationDate}. Asegúrate de descargar tu plan de negocio en PDF antes de esa fecha.
-            </div>
-            
-            <div style="text-align: center;">
-              <a href="${data.dashboardUrl}" class="button">
-                🚀 Acceder a mi Dashboard
-              </a>
-            </div>
-            
-            <h3>¿Qué puedes hacer ahora?</h3>
-            <ul>
-              <li>✅ Ver tu análisis completo de negocio generado por IA</li>
-              <li>✅ Acceder a herramientas recomendadas personalizadas</li>
-              <li>✅ Descargar tu plan de negocio en PDF</li>
-              <li>✅ Seguir tu plan de acción paso a paso</li>
-              <li>✅ Actualizar tu información cuando quieras</li>
-              <li>✅ Compartir tu idea en redes sociales</li>
-            </ul>
-            
-            <h3>📞 ¿Necesitas Ayuda?</h3>
-            <p>Si tienes alguna pregunta o necesitas asistencia, no dudes en contactarnos. Estamos aquí para ayudarte a hacer crecer tu negocio.</p>
-          </div>
-          
-          <div class="footer">
-            <p>¡Gracias por confiar en Konsul Plan para tu proyecto de negocio!</p>
-            <p>¡Que tengas mucho éxito con tu emprendimiento! 🚀</p>
-            <p><small>Este email fue enviado automáticamente. Por favor, no respondas a este correo.</small></p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-    
-    const text = `
-      ¡PAGO EXITOSO! TU DASHBOARD ESTÁ LISTO
-      
-      ¡Hola ${data.userName}!
-      
-      ¡Excelente noticia! Tu pago ha sido procesado correctamente y tu dashboard de negocio está completamente listo para usar.
-      
-      TU IDEA DE NEGOCIO: ${data.idea}
-      
-      INFORMACIÓN DE ACCESO:
-      Email: ${data.userEmail}
-      Contraseña: ${data.password}
-      ID del Dashboard: ${data.dashboardId}
-      
-      INFORMACIÓN DEL PROYECTO:
-      Fecha de Creación: ${data.creationDate}
-      Fecha de Caducidad: ${data.expirationDate}
-      
-      IMPORTANTE: Tu contraseña no se puede recuperar. Guárdala en un lugar seguro.
-      
-      RECORDATORIO: Tu dashboard estará disponible hasta el ${data.expirationDate}. Asegúrate de descargar tu plan de negocio en PDF antes de esa fecha.
-      
-      Para acceder a tu dashboard, visita: ${data.dashboardUrl}
-      
-      ¿QUÉ PUEDES HACER AHORA?
-      - Ver tu análisis completo de negocio generado por IA
-      - Acceder a herramientas recomendadas personalizadas
-      - Descargar tu plan de negocio en PDF
-      - Seguir tu plan de acción paso a paso
-      - Actualizar tu información cuando quieras
-      - Compartir tu idea en redes sociales
-      
-      ¿NECESITAS AYUDA?
-      Si tienes alguna pregunta o necesitas asistencia, no dudes en contactarnos.
-      
-      ¡Gracias por confiar en Konsul Plan para tu proyecto de negocio!
-      ¡Que tengas mucho éxito con tu emprendimiento! 🚀
-      
-      Saludos,
-      El equipo de Konsul Plan
-    `;
-    
-    return { html, text };
-  }
   
   // Send email via external service (EmailJS, SendGrid, etc.)
   private static async sendEmailViaService(emailData: EmailData): Promise<boolean> {
@@ -535,6 +376,64 @@ export class EmailService {
     }
   }
   
+  // Send payment success email via EmailJS with specific template
+  private static async sendPaymentSuccessViaEmailJS(emailData: PaymentSuccessEmailData): Promise<boolean> {
+    try {
+      console.log('📧 Sending payment success via EmailJS to:', emailData.userEmail);
+      console.log('📧 EmailJS Config:', {
+        serviceId: EMAIL_CONFIG.EMAILJS.SERVICE_ID,
+        templateId: EMAIL_CONFIG.EMAILJS.TEMPLATE_ID,
+        userId: EMAIL_CONFIG.EMAILJS.USER_ID
+      });
+      
+      const templateParams = {
+        to_email: emailData.userEmail,
+        subject: '🎉 ¡Pago Exitoso! Tu Dashboard de Negocio está Listo',
+        userName: emailData.userName,
+        userEmail: emailData.userEmail,
+        dashboardId: emailData.dashboardId,
+        password: emailData.password,
+        idea: emailData.idea,
+        creationDate: emailData.creationDate,
+        expirationDate: emailData.expirationDate,
+        dashboardUrl: emailData.dashboardUrl,
+        name: 'Konsul Plan',
+        email: 'plan@konsul.digital'
+      };
+      
+      console.log('📧 Payment Success Template params:', templateParams);
+      
+      const response = await fetch(EMAIL_CONFIG.EMAILJS.API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          service_id: EMAIL_CONFIG.EMAILJS.SERVICE_ID,
+          template_id: EMAIL_CONFIG.EMAILJS.TEMPLATE_ID,
+          user_id: EMAIL_CONFIG.EMAILJS.USER_ID,
+          template_params: templateParams
+        })
+      });
+      
+      console.log('📧 EmailJS Response Status:', response.status);
+      
+      if (response.ok) {
+        const responseText = await response.text();
+        console.log('✅ EmailJS payment success email sent successfully:', responseText);
+        return true;
+      } else {
+        const errorText = await response.text();
+        console.error('❌ EmailJS payment success failed:', response.status, response.statusText, errorText);
+        return false;
+      }
+      
+    } catch (error) {
+      console.error('❌ EmailJS payment success error:', error);
+      return false;
+    }
+  }
+
   // Send via EmailJS
   private static async sendViaEmailJS(emailData: EmailData): Promise<boolean> {
     try {
