@@ -1611,7 +1611,7 @@ function App() {
           console.log('🔗 Redirect URL:', redirectUrl);
           console.log('🔗 Stripe URL:', `https://buy.stripe.com/5kQ7sL3T51j40m0aoggjC03?success_url=${encodeURIComponent(redirectUrl)}`);
           
-          const stripeUrl = `https://buy.stripe.com/5kQ7sL3T51j40m0aoggjC03?success_url=${encodeURIComponent(redirectUrl)}`;
+          const stripeUrl = `https://buy.stripe.com/test_7sY4gzcpB2n8d8M3ZSgjC00?success_url=${encodeURIComponent(redirectUrl)}`;
           window.location.href = stripeUrl;
         }}
       />
@@ -1688,7 +1688,7 @@ function App() {
           console.log('🔗 Redirect URL:', redirectUrl);
           console.log('🔗 Stripe URL:', `https://buy.stripe.com/5kQ7sL3T51j40m0aoggjC03?success_url=${encodeURIComponent(redirectUrl)}`);
           
-          const stripeUrl = `https://buy.stripe.com/5kQ7sL3T51j40m0aoggjC03?success_url=${encodeURIComponent(redirectUrl)}`;
+          const stripeUrl = `https://buy.stripe.com/test_7sY4gzcpB2n8d8M3ZSgjC00?success_url=${encodeURIComponent(redirectUrl)}`;
           window.location.href = stripeUrl;
         }}
       />
