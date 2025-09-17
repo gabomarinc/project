@@ -174,6 +174,11 @@ function App() {
       console.log('💳 Procesando pago exitoso...');
       console.log('📱 User Agent:', navigator.userAgent);
       console.log('📱 Es móvil:', /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
+      console.log('🔍 Estado actual del dashboard:', { 
+        hasIdea: !!idea, 
+        hasDashboardContent: !!dashboardAIContent,
+        previewSessionId: previewSessionId 
+      });
       
       // Show payment success loading screen
       setShowPaymentSuccessLoading(true);
@@ -566,7 +571,6 @@ function App() {
         }
         
         console.log('🔄 Return to preview:', finalReturnToPreview);
-        await handlePaymentSuccess();
         
         // Verificar si debe regresar al preview o ir al dashboard
         if (finalReturnToPreview === 'true') {
@@ -588,6 +592,11 @@ function App() {
                 setShowPreview(true);
                 // Marcar el dashboard como desbloqueado para que el botón esté disponible
                 setIsDashboardUnlocked(true);
+                setShowPaymentSuccessLoading(false);
+                console.log('✅ Preview desbloqueado después del pago');
+                
+                // Ahora llamar a handlePaymentSuccess con los datos ya establecidos
+                await handlePaymentSuccess();
               } else {
                 console.log('⚠️ No se pudo cargar el dashboard, usando datos locales...');
                 // Usar datos locales si no se puede cargar desde Airtable
