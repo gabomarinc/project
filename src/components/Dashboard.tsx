@@ -4275,18 +4275,6 @@ const Dashboard: React.FC<DashboardProps> = ({ name, email, idea, problem, ideal
                 </div>
                 
                 <div className="flex flex-col sm:flex-row items-center gap-3 lg:justify-end">
-                  {/* Guardar Button */}
-                  <button
-                    onClick={saveNotesToAirtable}
-                    className="px-3 sm:px-4 py-2 bg-gradient-to-r from-cyan-500 via-green-500 to-blue-600 text-white text-sm font-medium rounded-lg hover:shadow-lg transition-all duration-300 flex items-center gap-2 min-w-0 flex-shrink-0"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-                    </svg>
-                    <span className="hidden sm:inline">Guardar Notas</span>
-                    <span className="sm:hidden">💾 Guardar</span>
-                  </button>
-                  
                   <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-xl p-4 text-center lg:text-right">
                     <div className="text-2xl lg:text-3xl font-bold text-cyan-400 mb-1">
                       {Math.round((completedSteps.length / bitacoraSteps.length) * 100)}%
@@ -4469,7 +4457,18 @@ const Dashboard: React.FC<DashboardProps> = ({ name, email, idea, problem, ideal
                           
                           {/* Notes Section in Bitácora */}
                           <div className="mt-4 p-4 bg-gray-900/50 rounded-lg border border-gray-600">
-                            <h4 className="text-cyan-400 font-medium mb-2">📝 Notas del Proyecto</h4>
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className="text-cyan-400 font-medium">📝 Notas del Proyecto</h4>
+                              <button
+                                onClick={saveNotesToAirtable}
+                                className="px-3 py-1.5 bg-gradient-to-r from-cyan-500 via-green-500 to-blue-600 text-white text-xs font-medium rounded-lg hover:shadow-lg transition-all duration-300 flex items-center gap-1.5"
+                              >
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                                </svg>
+                                <span>Guardar</span>
+                              </button>
+                            </div>
                             <textarea
                               value={stepNotes[index] || ''}
                               onChange={(e) => updateStepNote(index, e.target.value)}
