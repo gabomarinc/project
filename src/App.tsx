@@ -1528,7 +1528,7 @@ function App() {
             {typewriterText}
             <span className="animate-pulse">|</span>
           </span>
-            {' '}crear tu plan de negocio inteligente
+            {' '}crear tu plan de negocio
           </span>
         </h1>
 
