@@ -540,44 +540,16 @@ function App() {
       
       if (paymentSuccess === 'true') {
         console.log('💳 Usuario regresando de pago exitoso, validando sesión...');
-        
-        // Usar datos de localStorage como respaldo si Stripe perdió los parámetros
-        let finalPreviewId = sessionPreviewId;
-        let finalEmail = sessionEmail;
-        let finalReturnToPreview = returnToPreview;
-        
-        if (!finalPreviewId || !finalEmail || !finalReturnToPreview) {
-          console.log('⚠️ Stripe perdió parámetros, usando localStorage como respaldo...');
-          const storedPaymentData = localStorage.getItem('stripe_payment_data');
-          if (storedPaymentData) {
-            try {
-              const paymentData = JSON.parse(storedPaymentData);
-              console.log('💾 Datos recuperados de localStorage:', paymentData);
-              
-              // Verificar que los datos no sean muy antiguos (menos de 1 hora)
-              const isRecent = Date.now() - paymentData.timestamp < 60 * 60 * 1000;
-              if (isRecent) {
-                finalPreviewId = finalPreviewId || paymentData.previewSessionId;
-                finalEmail = finalEmail || paymentData.email;
-                finalReturnToPreview = finalReturnToPreview || 'true';
-                console.log('✅ Datos de localStorage aplicados:', { finalPreviewId, finalEmail, finalReturnToPreview });
-              } else {
-                console.log('⚠️ Datos de localStorage muy antiguos, ignorando...');
-              }
-            } catch (error) {
-              console.error('❌ Error parseando datos de localStorage:', error);
-            }
-          }
-        }
-        
-        console.log('🔄 Return to preview:', finalReturnToPreview);
+        await handlePaymentSuccess();
         
         // Verificar si debe regresar al preview o ir al dashboard
-        if (finalReturnToPreview === 'true') {
+        if (returnToPreview === 'true') {
           console.log('🔄 Regresando al preview después del pago exitoso...');
           
-          // Usar el preview ID final (de URL o localStorage)
-          const previewIdToUse = finalPreviewId || localStorage.getItem('previewSessionId');
+          // Buscar preview ID en localStorage o usar el de la URL
+          const storedPreviewId = localStorage.getItem('previewSessionId');
+          const urlPreviewId = urlParams.get('session_preview_id');
+          const previewIdToUse = urlPreviewId || storedPreviewId;
           
           if (previewIdToUse) {
             console.log('🔍 Usando preview ID:', previewIdToUse);
@@ -1596,17 +1568,12 @@ function App() {
           console.log('🆔 PreviewSessionId:', previewSessionId);
           console.log('🌐 Current URL:', window.location.href);
           
-          // Guardar datos en localStorage como respaldo
-          const paymentData = {
-            email: email,
-            previewSessionId: previewSessionId,
-            timestamp: Date.now()
-          };
-          localStorage.setItem('stripe_payment_data', JSON.stringify(paymentData));
-          console.log('💾 Datos guardados en localStorage:', paymentData);
+          // Usar finalPreviewId de localStorage como en la versión antigua
+          const finalPreviewId = localStorage.getItem('previewSessionId') || previewSessionId;
+          console.log('🔍 Final Preview ID (de localStorage):', finalPreviewId);
           
           const currentUrl = window.location.origin + window.location.pathname;
-          const redirectUrl = `${currentUrl}?session_email=${encodeURIComponent(email)}&session_password=${encodeURIComponent('temp_password')}&session_preview_id=${previewSessionId}&payment_success=true&return_to_preview=true`;
+          const redirectUrl = `${currentUrl}?session_email=${encodeURIComponent(email)}&session_password=${encodeURIComponent('temp_password')}&session_preview_id=${finalPreviewId}&payment_success=true&return_to_preview=true`;
           
           console.log('🔗 Redirect URL:', redirectUrl);
           console.log('🔗 Stripe URL:', `https://buy.stripe.com/5kQ7sL3T51j40m0aoggjC03?success_url=${encodeURIComponent(redirectUrl)}`);
@@ -1673,17 +1640,12 @@ function App() {
           console.log('🆔 PreviewSessionId:', previewSessionId);
           console.log('🌐 Current URL:', window.location.href);
           
-          // Guardar datos en localStorage como respaldo
-          const paymentData = {
-            email: email,
-            previewSessionId: previewSessionId,
-            timestamp: Date.now()
-          };
-          localStorage.setItem('stripe_payment_data', JSON.stringify(paymentData));
-          console.log('💾 Datos guardados en localStorage:', paymentData);
+          // Usar finalPreviewId de localStorage como en la versión antigua
+          const finalPreviewId = localStorage.getItem('previewSessionId') || previewSessionId;
+          console.log('🔍 Final Preview ID (de localStorage):', finalPreviewId);
           
           const currentUrl = window.location.origin + window.location.pathname;
-          const redirectUrl = `${currentUrl}?session_email=${encodeURIComponent(email)}&session_password=${encodeURIComponent('temp_password')}&session_preview_id=${previewSessionId}&payment_success=true&return_to_preview=true`;
+          const redirectUrl = `${currentUrl}?session_email=${encodeURIComponent(email)}&session_password=${encodeURIComponent('temp_password')}&session_preview_id=${finalPreviewId}&payment_success=true&return_to_preview=true`;
           
           console.log('🔗 Redirect URL:', redirectUrl);
           console.log('🔗 Stripe URL:', `https://buy.stripe.com/5kQ7sL3T51j40m0aoggjC03?success_url=${encodeURIComponent(redirectUrl)}`);
