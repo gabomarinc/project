@@ -526,6 +526,13 @@ function App() {
       const paymentSuccess = urlParams.get('payment_success');
       const returnToPreview = urlParams.get('return_to_preview');
       
+      console.log('🔍 DEBUG - Parámetros recibidos después del pago:');
+      console.log('💳 Payment Success:', paymentSuccess);
+      console.log('🔄 Return to Preview:', returnToPreview);
+      console.log('🆔 Session Preview ID:', sessionPreviewId);
+      console.log('📧 Session Email:', sessionEmail);
+      console.log('🌐 URL completa:', window.location.href);
+      
       if (paymentSuccess === 'true') {
         console.log('💳 Usuario regresando de pago exitoso, validando sesión...');
         console.log('🔄 Return to preview:', returnToPreview);
@@ -1547,8 +1554,17 @@ function App() {
         onRenew={() => {
           // Redirigir al link de renovación
           // Crear URL de redirección con parámetros de sesión y pago exitoso
+          console.log('🔍 DEBUG - Valores antes de crear URL de Stripe:');
+          console.log('📧 Email:', email);
+          console.log('🆔 PreviewSessionId:', previewSessionId);
+          console.log('🌐 Current URL:', window.location.href);
+          
           const currentUrl = window.location.origin + window.location.pathname;
           const redirectUrl = `${currentUrl}?session_email=${encodeURIComponent(email)}&session_password=${encodeURIComponent('temp_password')}&session_preview_id=${previewSessionId}&payment_success=true&return_to_preview=true`;
+          
+          console.log('🔗 Redirect URL:', redirectUrl);
+          console.log('🔗 Stripe URL:', `https://buy.stripe.com/5kQ7sL3T51j40m0aoggjC03?success_url=${encodeURIComponent(redirectUrl)}`);
+          
           const stripeUrl = `https://buy.stripe.com/5kQ7sL3T51j40m0aoggjC03?success_url=${encodeURIComponent(redirectUrl)}`;
           window.location.href = stripeUrl;
         }}
@@ -1606,8 +1622,17 @@ function App() {
         onRenew={() => {
           // Redirigir al link de renovación
           // Crear URL de redirección con parámetros de sesión y pago exitoso
+          console.log('🔍 DEBUG - Valores antes de crear URL de Stripe:');
+          console.log('📧 Email:', email);
+          console.log('🆔 PreviewSessionId:', previewSessionId);
+          console.log('🌐 Current URL:', window.location.href);
+          
           const currentUrl = window.location.origin + window.location.pathname;
           const redirectUrl = `${currentUrl}?session_email=${encodeURIComponent(email)}&session_password=${encodeURIComponent('temp_password')}&session_preview_id=${previewSessionId}&payment_success=true&return_to_preview=true`;
+          
+          console.log('🔗 Redirect URL:', redirectUrl);
+          console.log('🔗 Stripe URL:', `https://buy.stripe.com/5kQ7sL3T51j40m0aoggjC03?success_url=${encodeURIComponent(redirectUrl)}`);
+          
           const stripeUrl = `https://buy.stripe.com/5kQ7sL3T51j40m0aoggjC03?success_url=${encodeURIComponent(redirectUrl)}`;
           window.location.href = stripeUrl;
         }}
