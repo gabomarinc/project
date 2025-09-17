@@ -1573,10 +1573,10 @@ function App() {
           console.log('🔍 Final Preview ID (de localStorage):', finalPreviewId);
           
           const currentUrl = window.location.origin + window.location.pathname;
-          const redirectUrl = `${currentUrl}?session_email=${encodeURIComponent(email)}&session_password=${encodeURIComponent('temp_password')}&session_preview_id=${finalPreviewId}&payment_success=true&return_to_preview=true`;
+          const redirectUrl = `${currentUrl}?payment_success=true&session_preview_id=${finalPreviewId}&return_to_preview=true`;
           
           console.log('🔗 Redirect URL:', redirectUrl);
-          console.log('🔗 Stripe URL:', `https://buy.stripe.com/5kQ7sL3T51j40m0aoggjC03?success_url=${encodeURIComponent(redirectUrl)}`);
+          console.log('🔗 Stripe URL:', `https://buy.stripe.com/test_7sY4gzcpB2n8d8M3ZSgjC00?success_url=${encodeURIComponent(redirectUrl)}`);
           
           const stripeUrl = `https://buy.stripe.com/test_7sY4gzcpB2n8d8M3ZSgjC00?success_url=${encodeURIComponent(redirectUrl)}`;
           window.location.href = stripeUrl;
@@ -1645,10 +1645,10 @@ function App() {
           console.log('🔍 Final Preview ID (de localStorage):', finalPreviewId);
           
           const currentUrl = window.location.origin + window.location.pathname;
-          const redirectUrl = `${currentUrl}?session_email=${encodeURIComponent(email)}&session_password=${encodeURIComponent('temp_password')}&session_preview_id=${finalPreviewId}&payment_success=true&return_to_preview=true`;
+          const redirectUrl = `${currentUrl}?payment_success=true&session_preview_id=${finalPreviewId}&return_to_preview=true`;
           
           console.log('🔗 Redirect URL:', redirectUrl);
-          console.log('🔗 Stripe URL:', `https://buy.stripe.com/5kQ7sL3T51j40m0aoggjC03?success_url=${encodeURIComponent(redirectUrl)}`);
+          console.log('🔗 Stripe URL:', `https://buy.stripe.com/test_7sY4gzcpB2n8d8M3ZSgjC00?success_url=${encodeURIComponent(redirectUrl)}`);
           
           const stripeUrl = `https://buy.stripe.com/test_7sY4gzcpB2n8d8M3ZSgjC00?success_url=${encodeURIComponent(redirectUrl)}`;
           window.location.href = stripeUrl;
