@@ -108,6 +108,17 @@ const AnalysisPreview: React.FC<AnalysisPreviewProps> = ({
     });
   }, [isDashboardUnlocked, previewSessionId, isSessionCreated, userEmail, isCreatingSession]);
 
+  // Force re-render when dashboard unlock status changes
+  useEffect(() => {
+    if (isDashboardUnlocked) {
+      console.log('🚀 Dashboard desbloqueado - forzando re-renderizado del botón');
+      // Force a small delay to ensure state propagation
+      setTimeout(() => {
+        console.log('✅ Re-renderizado completado');
+      }, 100);
+    }
+  }, [isDashboardUnlocked]);
+
   const [showPaymentSection, setShowPaymentSection] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['executiveSummary']));
 
@@ -845,7 +856,7 @@ const AnalysisPreview: React.FC<AnalysisPreviewProps> = ({
                       console.log('🔗 redirectUrl:', redirectUrl);
                       
                       // Abrir Stripe con URL de redirección
-                      const stripeUrl = `https://buy.stripe.com/test_7sY4gzcpB2n8d8M3ZSgjC00?success_url=${encodeURIComponent(redirectUrl)}`;
+                      const stripeUrl = `https://buy.stripe.com/cNi5kD1KX5zkfgUdAsgjC02?success_url=${encodeURIComponent(redirectUrl)}`;
                       console.log('💳 stripeUrl:', stripeUrl);
                       window.location.href = stripeUrl;
                     }}

@@ -37,7 +37,7 @@ export const CredentialsModal: React.FC<CredentialsModalProps> = ({
     
     console.log('🔗 URL de redirección simplificada:', redirectUrl);
     
-    const stripeUrl = `https://buy.stripe.com/test_7sY4gzcpB2n8d8M3ZSgjC00?success_url=${encodeURIComponent(redirectUrl)}`;
+    const stripeUrl = `https://buy.stripe.com/cNi5kD1KX5zkfgUdAsgjC02?success_url=${encodeURIComponent(redirectUrl)}`;
     
     return stripeUrl;
   };

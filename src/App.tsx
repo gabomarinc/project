@@ -914,7 +914,12 @@ function App() {
         // Mark session as created and payment as registered
         setIsSessionCreated(true);
         setIsPaymentRegistered(true);
-        setIsDashboardUnlocked(true);
+        
+        // Add a small delay to ensure state propagation
+        setTimeout(() => {
+          setIsDashboardUnlocked(true);
+          console.log('🚀 Dashboard desbloqueado después del pago exitoso');
+        }, 100);
         
         // Try to load real preview data from Airtable first
         console.log('🔄 Intentando cargar datos reales del preview...');
@@ -1013,12 +1018,16 @@ function App() {
           const expirationDate = new Date();
           expirationDate.setDate(expirationDate.getDate() + 30);
           
+          // Get the correct password from the verified dashboard data
+          const correctPassword = result.dashboard.user_password || sessionData.password;
+          console.log('🔑 Usando contraseña correcta para email:', correctPassword);
+          
           // Send payment success email
           const emailSent = await EmailService.sendPaymentSuccessEmail({
             userEmail: sessionData.email,
             userName: sessionData.email.split('@')[0],
             dashboardId: sessionData.previewId,
-            password: sessionData.password,
+            password: correctPassword,
             idea: dashboardData?.idea || idea || 'Tu idea de negocio',
             creationDate: new Date().toLocaleDateString('es-ES', {
               year: 'numeric',
@@ -1433,7 +1442,7 @@ function App() {
         isExpired={isDashboardExpired}
         onRenew={() => {
           // Redirigir al link de renovación
-          window.open('https://buy.stripe.com/5kQ7sL3T51j40m0aoggjC03', '_blank');
+          window.open('https://buy.stripe.com/cNi5kD1KX5zkfgUdAsgjC02', '_blank');
         }}
       />
     );
@@ -1488,7 +1497,7 @@ function App() {
         isExpired={isDashboardExpired}
         onRenew={() => {
           // Redirigir al link de renovación
-          window.open('https://buy.stripe.com/5kQ7sL3T51j40m0aoggjC03', '_blank');
+          window.open('https://buy.stripe.com/cNi5kD1KX5zkfgUdAsgjC02', '_blank');
         }}
       />
     );
