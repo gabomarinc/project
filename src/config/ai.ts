@@ -39,8 +39,9 @@ try {
 
 // Available Gemini models in order of preference (newest first)
 const AVAILABLE_MODELS = [
-  'gemini-1.5-flash',      // Latest and fastest
-  'gemini-1.5-pro',        // Latest pro version
+  'gemini-2.0-flash-exp',  // Working experimental model
+  'gemini-1.5-pro',        // Most stable and reliable
+  'gemini-1.5-flash',      // Fast version
   'gemini-1.5-flash-001',  // Specific version
   'gemini-1.5-pro-001',    // Specific pro version
   'gemini-pro'             // Fallback to older version
@@ -80,6 +81,8 @@ export const getWorkingModel = async () => {
     throw new Error('GoogleGenerativeAI not initialized');
   }
   
+  console.log('🔍 Testing available models in order...');
+  
   for (const modelName of AVAILABLE_MODELS) {
     try {
       console.log(`🧪 Testing model: ${modelName}`);
@@ -107,6 +110,7 @@ export const getWorkingModel = async () => {
         continue;
       }
       
+      console.log(`🔄 Attempting to generate content with ${modelName}...`);
       const result = await testModel.generateContent('Say "Hello"');
       
       // Safety check: ensure result is valid
@@ -132,14 +136,35 @@ export const getWorkingModel = async () => {
       }
       
       console.log(`✅ Model ${modelName} working! Response: ${text}`);
+      console.log(`🎯 Using model: ${modelName} for all AI operations`);
       return testModel;
     } catch (error) {
-      console.log(`❌ Model ${modelName} failed:`, error);
+      console.log(`❌ Model ${modelName} failed:`, {
+        error: error.message,
+        status: error.status,
+        code: error.code,
+        details: error.details
+      });
+      
+      // Check if it's a 404 error (model not found)
+      if (error.status === 404) {
+        console.log(`🚫 Model ${modelName} not found (404) - this model may not be available in your region`);
+      } else if (error.status === 403) {
+        console.log(`🔒 Model ${modelName} access denied (403) - check API key permissions`);
+      } else if (error.status === 429) {
+        console.log(`⏰ Model ${modelName} rate limited (429) - too many requests`);
+      }
+      
       continue;
     }
   }
   
   console.error('❌ All models failed, using fallback');
+  console.error('🔍 This could be due to:');
+  console.error('   - API key issues');
+  console.error('   - Model availability in your region');
+  console.error('   - Quota limits');
+  console.error('   - Network connectivity');
   
   // Safety check: ensure fallback model is valid
   if (!model) {
@@ -147,5 +172,6 @@ export const getWorkingModel = async () => {
     throw new Error('No working AI model available');
   }
   
+  console.log('🔄 Using fallback model as last resort');
   return model; // Return the default model as last resort
 };
