@@ -60,7 +60,7 @@ const DomainChecker: React.FC<DomainCheckerProps> = ({ brandNames }) => {
         searchUrl = `https://www.namecheap.com/domains/registration/results/?domain=${selectedDomain}`;
         break;
       case 'hostinger':
-        searchUrl = `https://www.hostinger.es/dominios?domain=${selectedDomain}`;
+        searchUrl = `https://www.hostinger.com/domain-name-results?domain=${selectedDomain}&from=domain-name-search`;
         break;
       default:
         searchUrl = `https://www.google.com/search?q=${selectedDomain}+domain+registrar`;
@@ -127,7 +127,7 @@ const DomainChecker: React.FC<DomainCheckerProps> = ({ brandNames }) => {
               <span className="text-sm text-gray-300">Buscadores</span>
             </div>
             <div className="text-2xl font-bold text-cyan-400">
-              4
+              3
             </div>
           </div>
         </div>
@@ -222,17 +222,6 @@ const DomainChecker: React.FC<DomainCheckerProps> = ({ brandNames }) => {
             </div>
             
             <div className="space-y-3">
-              <button
-                onClick={() => openDomainSearch('dondominio')}
-                className="w-full p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-3"
-              >
-                <Globe className="w-5 h-5" />
-                <div className="text-left">
-                  <div className="font-medium">DonDominio</div>
-                  <div className="text-sm opacity-80">Buscador español</div>
-                </div>
-              </button>
-              
               <button
                 onClick={() => openDomainSearch('godaddy')}
                 className="w-full p-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors flex items-center gap-3"
