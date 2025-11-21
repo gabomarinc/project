@@ -1504,7 +1504,7 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 flex items-center justify-center p-2 md:p-4">
       {/* Background glow effects */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl"></div>
@@ -1514,23 +1514,18 @@ function App() {
 
       <div className="relative w-full max-w-2xl mx-auto text-center">
         {/* Logo KONSUL */}
-        <div className="flex flex-col items-center justify-center mb-8">
-          {/* Logo KONSUL */}
-          <div className="flex flex-col items-center mb-4">
+        <div className="flex flex-col items-center justify-center" style={{ marginTop: '-100px', marginBottom: '-100px' }}>
+          <div className="flex flex-col items-center">
             <img 
-              src="https://konsul.digital/wp-content/uploads/2025/07/Logo-en-BW-e1751712792454.png" 
+              src="https://konsul.digital/wp-content/uploads/2025/11/Konsul-1.avif" 
               alt="KONSUL" 
-              className="h-16 w-auto mb-2"
+              className="h-48 md:h-64 lg:h-80 w-auto"
             />
-            {/* Plan */}
-            <div className="text-lg font-semibold bg-gradient-to-r from-cyan-400 via-green-500 to-blue-600 bg-clip-text text-transparent">
-              Plan
-          </div>
           </div>
         </div>
 
         {/* Main Title */}
-        <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6 animate-in fade-in duration-1000">
+        <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-3 animate-in fade-in duration-1000">
           <span className="bg-gradient-to-r from-white via-cyan-100 to-white bg-clip-text text-transparent">
             La forma más fácil y rápida de{' '}
           <span className="bg-gradient-to-r from-cyan-400 via-green-500 to-blue-600 bg-clip-text text-transparent relative">
@@ -1542,12 +1537,12 @@ function App() {
         </h1>
 
         {/* Subtitle */}
-        <p className="text-lg md:text-xl text-gray-300 mb-8 max-w-2xl mx-auto leading-relaxed animate-in fade-in duration-1000" style={{animationDelay: '0.3s'}}>
+        <p className="text-lg md:text-xl text-gray-300 mb-4 max-w-2xl mx-auto leading-relaxed animate-in fade-in duration-1000" style={{animationDelay: '0.3s'}}>
           Aquí encuentras consultoría automatizada con inteligencia artificial para PYMES, marketing digital y prueba de concepto, todo en un mismo lugar.
         </p>
 
         {/* Welcome Message */}
-        <div className="bg-gradient-to-r from-cyan-500/10 via-green-500/10 to-blue-600/10 border border-cyan-500/20 rounded-xl p-4 mb-8 backdrop-blur-sm animate-in fade-in duration-1000">
+        <div className="bg-gradient-to-r from-cyan-500/10 via-green-500/10 to-blue-600/10 border border-cyan-500/20 rounded-xl p-4 mb-4 backdrop-blur-sm animate-in fade-in duration-1000">
           <div className="flex items-center justify-center gap-3">
             <div className="w-2 h-2 bg-cyan-500 rounded-full animate-pulse"></div>
             <span className="text-cyan-400 text-sm font-medium">Formulario inteligente • Solo 6 pasos • 100% gratuito</span>
