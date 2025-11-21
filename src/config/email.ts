@@ -5,7 +5,9 @@ export const EMAIL_CONFIG = {
     SERVICE_ID: import.meta.env.VITE_EMAILJS_SERVICE_ID || 'default_service',
     TEMPLATE_ID: import.meta.env.VITE_EMAILJS_TEMPLATE_ID || 'default_template',
     USER_ID: import.meta.env.VITE_EMAILJS_USER_ID || 'default_user',
-    API_URL: 'https://api.emailjs.com/api/v1.0/email/send'
+    API_URL: 'https://api.emailjs.com/api/v1.0/email/send',
+    // Template ID for action plan step reminders (configurable)
+    ACTION_PLAN_TEMPLATE_ID: import.meta.env.VITE_EMAILJS_ACTION_PLAN_TEMPLATE_ID || ''
   },
   
   // SendGrid configuration (for production)
@@ -44,6 +46,11 @@ export const EMAIL_TEMPLATES = {
   WELCOME: {
     subject: '🎉 ¡Bienvenido a Konsul Plan!',
     template: 'welcome'
+  },
+  ACTION_PLAN_STEP: {
+    // Subject will be dynamically generated with step number and step title
+    subject: '📋 Recordatorio: Paso {stepNumber} - {stepTitle}',
+    template: 'action-plan-step-reminder'
   }
 };
 

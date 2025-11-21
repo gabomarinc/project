@@ -434,6 +434,49 @@ export class EmailService {
     }
   }
 
+  // Send email via EmailJS with custom template ID
+  static async sendEmailWithTemplate(
+    emailData: EmailData,
+    templateId: string
+  ): Promise<boolean> {
+    try {
+      console.log('📧 Sending email via EmailJS with custom template:', templateId);
+      
+      const templateParams = {
+        to_email: emailData.to,
+        subject: emailData.subject,
+        message: emailData.html,
+        name: 'Konsul Plan',
+        email: emailData.to
+      };
+
+      const response = await fetch(EMAIL_CONFIG.EMAILJS.API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          service_id: EMAIL_CONFIG.EMAILJS.SERVICE_ID,
+          template_id: templateId,
+          user_id: EMAIL_CONFIG.EMAILJS.USER_ID,
+          template_params: templateParams
+        })
+      });
+
+      if (response.ok) {
+        console.log('✅ Email sent successfully with custom template');
+        return true;
+      } else {
+        const errorText = await response.text();
+        console.error('❌ EmailJS failed with custom template:', response.status, response.statusText, errorText);
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ EmailJS error with custom template:', error);
+      return false;
+    }
+  }
+
   // Send via EmailJS
   private static async sendViaEmailJS(emailData: EmailData): Promise<boolean> {
     try {

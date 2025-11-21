@@ -36,6 +36,8 @@ import { safeObjectKeys, safeObjectEntries } from '../utils/safeObjectUtils';
 import DomainChecker from './DomainChecker';
 import ExpirationMessage from './ExpirationMessage';
 import { calculateDeadlines, getDeadlineInfo, getUrgencyColor, getDeadlineIcon, formatDeadlineDate } from '../utils/deadlineUtils';
+import { actionPlanEmailScheduler } from '../services/actionPlanEmailScheduler';
+import { EMAIL_CONFIG } from '../config/email';
 
 interface DashboardProps {
   name: string;
@@ -2689,6 +2691,24 @@ const Dashboard: React.FC<DashboardProps> = ({ name, email, idea, problem, ideal
     generateAIContent();
   }, [existingAIContent]);
 
+  // Configure action plan email scheduler on mount
+  useEffect(() => {
+    // Configurar el template ID del scheduler
+    const templateId = EMAIL_CONFIG.EMAILJS.ACTION_PLAN_TEMPLATE_ID;
+    if (templateId) {
+      actionPlanEmailScheduler.setTemplateId(templateId);
+      console.log('📧 Action Plan Email Scheduler configured with template ID:', templateId);
+      
+      // Exponer el scheduler en window para pruebas (solo en desarrollo)
+      if (typeof window !== 'undefined' && import.meta.env.DEV) {
+        (window as any).actionPlanEmailScheduler = actionPlanEmailScheduler;
+        console.log('🧪 Action Plan Email Scheduler available in window.actionPlanEmailScheduler for testing');
+      }
+    } else {
+      console.warn('⚠️ VITE_EMAILJS_ACTION_PLAN_TEMPLATE_ID not configured. Action plan reminder emails will not be sent.');
+    }
+  }, []);
+
   // Calculate deadlines when aiContent changes
   useEffect(() => {
     if (aiContent) {
@@ -2697,6 +2717,35 @@ const Dashboard: React.FC<DashboardProps> = ({ name, email, idea, problem, ideal
         const actionPlanDeadlines = calculateDeadlines(aiContent.actionPlan);
         setActionPlanDeadlines(actionPlanDeadlines);
         console.log('📅 Action plan deadlines calculated:', actionPlanDeadlines);
+        
+        // Programar emails de recordatorio para cada paso (1 día antes del vencimiento)
+        if (email && name && actionPlanDeadlines.length > 0) {
+          const dashboardUrl = typeof window !== 'undefined' 
+            ? `${window.location.origin}?preview=${dashboardId || previewSessionId || ''}` 
+            : '';
+          
+          actionPlanEmailScheduler.scheduleAllStepEmails(
+            email,
+            name,
+            idea,
+            aiContent.actionPlan,
+            actionPlanDeadlines,
+            dashboardUrl
+          );
+          
+          // Mostrar información de los emails programados en consola
+          const emailInfo = actionPlanEmailScheduler.getConfigurationInfo();
+          console.log('📧 Action Plan Emails Programmed:', {
+            totalScheduled: emailInfo.scheduledCount,
+            emails: emailInfo.scheduledEmails.map(e => ({
+              paso: e.stepNumber,
+              fechaEnvio: e.sendDate,
+              fechaVencimiento: e.dueDate,
+              diasHastaEnvio: e.daysUntilSend,
+              confirmacion: `✅ Email programado para enviarse ${e.daysUntilSend} día(s) antes del vencimiento`
+            }))
+          });
+        }
       }
       
       // Calculate deadlines for bitácora (same as action plan for now)
@@ -2709,7 +2758,7 @@ const Dashboard: React.FC<DashboardProps> = ({ name, email, idea, problem, ideal
         console.log('📅 Bitácora deadlines calculated:', bitacoraDeadlines);
       }
     }
-  }, [aiContent]);
+  }, [aiContent, email, name, idea, dashboardId, previewSessionId]);
 
   // Load completed steps from Airtable when component mounts
   useEffect(() => {
