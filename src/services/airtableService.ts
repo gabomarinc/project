@@ -73,7 +73,8 @@ export class AirtableService {
   }
 
   // Find existing dashboard by email
-  static async findDashboardByEmail(email: string): Promise<DashboardSearchResult> {
+  // onlyActive: si es true, solo busca dashboards activos. Si es false, busca todos (el más reciente)
+  static async findDashboardByEmail(email: string, onlyActive: boolean = true): Promise<DashboardSearchResult> {
     try {
       console.log('�� Searching for existing dashboard for email:', email);
       
@@ -90,8 +91,11 @@ export class AirtableService {
           'Content-Type': 'application/json'
         },
         params: {
-          filterByFormula: `{${DASHBOARD_FIELDS.USER_EMAIL}} = '${email}'`,
-          maxRecords: 1
+          filterByFormula: onlyActive 
+            ? `AND({${DASHBOARD_FIELDS.USER_EMAIL}} = '${email}', {${DASHBOARD_FIELDS.IS_ACTIVE}} = TRUE())`
+            : `{${DASHBOARD_FIELDS.USER_EMAIL}} = '${email}'`,
+          maxRecords: 1,
+          sort: [{ field: DASHBOARD_FIELDS.CREATED_AT, direction: 'desc' }] // Más reciente primero
         }
       });
 
@@ -162,10 +166,125 @@ export class AirtableService {
     }
   }
 
+  /**
+   * Verifica si el usuario tiene algún pago de Stripe registrado en cualquier dashboard
+   * Busca en todos los dashboards del usuario (activos e inactivos)
+   */
+  static async hasUserEverPaid(email: string): Promise<boolean> {
+    try {
+      console.log('🔍 Verificando si el usuario tiene pago de Stripe registrado:', email);
+      
+      if (!email || email.trim().length === 0) {
+        return false;
+      }
+      
+      // Buscar todos los dashboards del usuario (activos e inactivos)
+      const response = await axios.get(AIRTABLE_TABLE_URL, {
+        headers: {
+          'Authorization': `Bearer ${AIRTABLE_CONFIG.PERSONAL_ACCESS_TOKEN}`,
+          'Content-Type': 'application/json'
+        },
+        params: {
+          filterByFormula: `{${DASHBOARD_FIELDS.USER_EMAIL}} = '${email}'`,
+          maxRecords: 100 // Buscar en todos los dashboards del usuario
+        }
+      });
+
+      if (!response.data.records || response.data.records.length === 0) {
+        console.log('✅ No hay dashboards para este usuario');
+        return false;
+      }
+
+      // Verificar si alguno de los dashboards tiene pago registrado
+      const hasPayment = response.data.records.some((record: any) => {
+        const fields = record.fields;
+        const hasStripePayment = fields[DASHBOARD_FIELDS.STRIPE_PAYMENT_ID] && 
+                                 fields[DASHBOARD_FIELDS.STRIPE_PAYMENT_ID].trim() !== '';
+        const hasPaymentAt = fields[DASHBOARD_FIELDS.PAYMENT_AT] && 
+                            fields[DASHBOARD_FIELDS.PAYMENT_AT].trim() !== '';
+        
+        return hasStripePayment || hasPaymentAt;
+      });
+
+      if (hasPayment) {
+        console.log('✅ Usuario tiene pago de Stripe registrado en algún dashboard');
+      } else {
+        console.log('❌ Usuario no tiene pago de Stripe registrado');
+      }
+
+      return hasPayment;
+    } catch (error: any) {
+      console.error('❌ Error verificando pago de Stripe:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Desactiva todos los dashboards activos para un email
+   * Esto permite que el usuario tenga múltiples dashboards pero solo uno activo
+   */
+  static async deactivateAllActiveDashboards(email: string): Promise<number> {
+    try {
+      console.log('🔄 Desactivando todos los dashboards activos para:', email);
+      
+      // Buscar todos los dashboards activos para este email
+      const response = await axios.get(AIRTABLE_TABLE_URL, {
+        headers: {
+          'Authorization': `Bearer ${AIRTABLE_CONFIG.PERSONAL_ACCESS_TOKEN}`,
+          'Content-Type': 'application/json'
+        },
+        params: {
+          filterByFormula: `AND({${DASHBOARD_FIELDS.USER_EMAIL}} = '${email}', {${DASHBOARD_FIELDS.IS_ACTIVE}} = TRUE())`,
+          maxRecords: 100 // Permitir múltiples dashboards
+        }
+      });
+
+      if (!response.data.records || response.data.records.length === 0) {
+        console.log('✅ No hay dashboards activos para desactivar');
+        return 0;
+      }
+
+      // Desactivar todos los dashboards encontrados
+      const recordsToUpdate = response.data.records.map((record: any) => ({
+        id: record.id,
+        fields: {
+          [DASHBOARD_FIELDS.IS_ACTIVE]: false,
+          [DASHBOARD_FIELDS.UPDATED_AT]: this.getCurrentDate()
+        }
+      }));
+
+      if (recordsToUpdate.length > 0) {
+        await axios.patch(AIRTABLE_TABLE_URL, {
+          records: recordsToUpdate
+        }, {
+          headers: {
+            'Authorization': `Bearer ${AIRTABLE_CONFIG.PERSONAL_ACCESS_TOKEN}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        console.log(`✅ ${recordsToUpdate.length} dashboard(s) desactivado(s)`);
+      }
+
+      return recordsToUpdate.length;
+    } catch (error: any) {
+      console.error('❌ Error desactivando dashboards:', error);
+      // No lanzar error, solo loguear - permitir continuar con la creación
+      return 0;
+    }
+  }
+
   // Create new dashboard
   static async createDashboard(email: string, dashboardData: any, projectInfo: any): Promise<DashboardSearchResult> {
     try {
       console.log('🚀 Creating new dashboard for email:', email);
+      
+      // ⚠️ IMPORTANTE: Desactivar todos los dashboards activos antes de crear uno nuevo
+      // Esto permite que el usuario tenga dashboards ilimitados pero solo uno activo
+      const deactivatedCount = await this.deactivateAllActiveDashboards(email);
+      if (deactivatedCount > 0) {
+        console.log(`🔄 ${deactivatedCount} dashboard(s) anterior(es) desactivado(s) - el nuevo será el activo`);
+      }
       
       const dashboardId = this.generateDashboardId();
       const now = this.getCurrentDate();
@@ -1378,26 +1497,44 @@ export class AirtableService {
     try {
       console.log('🔍 Verificando login para:', email);
       
-      // Buscar dashboards del usuario
+      // Buscar dashboards del usuario con sesión activa
+      // Buscar primero dashboards activos, luego todos los que tengan sesión activa
       const response = await axios.get(AIRTABLE_TABLE_URL, {
         headers: {
           'Authorization': `Bearer ${AIRTABLE_CONFIG.PERSONAL_ACCESS_TOKEN}`,
           'Content-Type': 'application/json'
         },
         params: {
-          filterByFormula: `AND({user_email} = '${email}', {user_password} = '${password}', {is_session_active} = TRUE())`,
-          sort: [{ field: 'created_at', direction: 'desc' }]
+          filterByFormula: `AND({${DASHBOARD_FIELDS.USER_EMAIL}} = "${email}", {${DASHBOARD_FIELDS.USER_PASSWORD}} = "${password}", {${DASHBOARD_FIELDS.IS_SESSION_ACTIVE}} = TRUE())`,
+          sort: [{ field: DASHBOARD_FIELDS.CREATED_AT, direction: 'desc' }],
+          maxRecords: 100 // Buscar en todos los dashboards con sesión activa
         }
       });
 
       const records = response.data.records;
       
       if (records.length === 0) {
+        console.log('❌ No se encontraron dashboards con sesión activa para:', email);
         return { success: false, error: 'Email o clave incorrectos' };
       }
 
-      // Tomar el dashboard más reciente
-      const dashboard = records[0];
+      // Priorizar dashboards activos, si no hay activos, usar el más reciente
+      let dashboard = null;
+      
+      // Buscar primero un dashboard activo
+      const activeDashboard = records.find((record: any) => {
+        const fields = record.fields;
+        return fields[DASHBOARD_FIELDS.IS_ACTIVE] === true;
+      });
+      
+      if (activeDashboard) {
+        console.log('✅ Dashboard activo encontrado para login');
+        dashboard = activeDashboard;
+      } else {
+        // Si no hay activo, usar el más reciente (el primero por orden de fecha)
+        console.log('⚠️ No hay dashboard activo, usando el más reciente');
+        dashboard = records[0];
+      }
       const now = this.getCurrentDate();
 
       // Actualizar último login
@@ -1416,11 +1553,13 @@ export class AirtableService {
       console.log('✅ Login verificado exitosamente');
       return { success: true, dashboard };
 
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorResponse = (error as any)?.response?.data?.error;
       console.error('❌ Error verificando login:', error);
       return { 
         success: false, 
-        error: `Error verificando login: ${error.response?.data?.error || error.message || error}` 
+        error: `Error verificando login: ${errorResponse || errorMessage || 'Error desconocido'}` 
       };
     }
   }
@@ -1643,11 +1782,12 @@ export class AirtableService {
       console.log('🔍 Update response:', updateResponse.data);
       console.log('✅ Completed steps saved successfully');
       return { success: true };
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('❌ Error saving completed steps:', error);
-      if (error.response) {
-        console.error('❌ Error response:', error.response.data);
-        console.error('❌ Error status:', error.response.status);
+      const errorAny = error as any;
+      if (errorAny?.response) {
+        console.error('❌ Error response:', errorAny.response.data);
+        console.error('❌ Error status:', errorAny.response.status);
       }
       return { 
         success: false, 
@@ -1718,11 +1858,12 @@ export class AirtableService {
 
       console.log('✅ Completed steps loaded successfully:', { completedSteps, stepNotes });
       return { success: true, completedSteps, stepNotes };
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('❌ Error loading completed steps:', error);
-      if (error.response) {
-        console.error('❌ Error response:', error.response.data);
-        console.error('❌ Error status:', error.response.status);
+      const errorAny = error as any;
+      if (errorAny?.response) {
+        console.error('❌ Error response:', errorAny.response.data);
+        console.error('❌ Error status:', errorAny.response.status);
       }
       return {
         success: false, 
@@ -1736,21 +1877,38 @@ export class AirtableService {
     try {
       console.log('🔍 Buscando sesión de usuario:', email);
       
-      // Search for user sessions in the Dashboards table
+      // Buscar todos los dashboards con sesión activa (no solo los activos)
+      // Esto permite que el usuario pueda iniciar sesión incluso si su dashboard fue desactivado
       const response = await axios.get(`${AIRTABLE_TABLE_URL}`, {
         headers: {
           'Authorization': `Bearer ${AIRTABLE_CONFIG.PERSONAL_ACCESS_TOKEN}`,
           'Content-Type': 'application/json'
         },
         params: {
-          filterByFormula: `AND({${DASHBOARD_FIELDS.USER_EMAIL}} = "${email}", {${DASHBOARD_FIELDS.USER_PASSWORD}} = "${password}", {${DASHBOARD_FIELDS.IS_ACTIVE}} = TRUE())`,
-          maxRecords: 1,
+          filterByFormula: `AND({${DASHBOARD_FIELDS.USER_EMAIL}} = "${email}", {${DASHBOARD_FIELDS.USER_PASSWORD}} = "${password}", {${DASHBOARD_FIELDS.IS_SESSION_ACTIVE}} = TRUE())`,
+          maxRecords: 100, // Buscar en todos los dashboards con sesión activa
           sort: [{ field: DASHBOARD_FIELDS.CREATED_AT, direction: 'desc' }]
         }
       });
 
       if (response.data.records && response.data.records.length > 0) {
-        const record = response.data.records[0];
+        // Priorizar dashboards activos, si no hay activos, usar el más reciente
+        let record = null;
+        
+        // Buscar primero un dashboard activo
+        const activeRecord = response.data.records.find((r: any) => {
+          return r.fields[DASHBOARD_FIELDS.IS_ACTIVE] === true;
+        });
+        
+        if (activeRecord) {
+          console.log('✅ Dashboard activo encontrado para login');
+          record = activeRecord;
+        } else {
+          // Si no hay activo, usar el más reciente (el primero por orden de fecha)
+          console.log('⚠️ No hay dashboard activo, usando el más reciente con sesión activa');
+          record = response.data.records[0];
+        }
+        
         const dashboardId = record.fields[DASHBOARD_FIELDS.DASHBOARD_ID] || record.id;
         
         if (dashboardId) {
@@ -1773,11 +1931,55 @@ export class AirtableService {
           error: 'Credenciales incorrectas o sesión no encontrada'
         };
       }
-    } catch (error) {
+    } catch (error: unknown) {
+      const errorAny = error as any;
       console.error('❌ Error buscando sesión de usuario:', error);
+      
+      // Manejar error 401 (No autorizado) - token inválido o expirado
+      if (errorAny?.response?.status === 401) {
+        console.error('❌ Error 401: Token de Airtable inválido o expirado');
+        console.error('🔑 Token usado:', AIRTABLE_CONFIG.PERSONAL_ACCESS_TOKEN ? 
+          AIRTABLE_CONFIG.PERSONAL_ACCESS_TOKEN.substring(0, 20) + '...' : 'No token');
+        console.error('💡 Verifica:');
+        console.error('   1. Que el token esté completo (tiene dos partes separadas por punto)');
+        console.error('   2. Que el token tenga permisos para la base de datos');
+        console.error('   3. Que el token no haya expirado');
+        console.error('   4. Que VITE_AIRTABLE_PERSONAL_ACCESS_TOKEN esté configurado en .env o Vercel');
+        
+        return {
+          success: false,
+          error: 'Error de autenticación con Airtable. Por favor, verifica la configuración del token.'
+        };
+      }
+      
+      // Manejar error 403 (Prohibido) - token válido pero sin permisos
+      if (errorAny?.response?.status === 403) {
+        console.error('❌ Error 403: Token de Airtable válido pero sin permisos');
+        console.error('🔑 Base ID:', AIRTABLE_CONFIG.BASE_ID);
+        console.error('🔑 Table Name:', AIRTABLE_CONFIG.TABLE_NAME);
+        console.error('💡 El token necesita tener permisos para:');
+        console.error('   1. Leer datos de la base:', AIRTABLE_CONFIG.BASE_ID);
+        console.error('   2. Acceder a la tabla:', AIRTABLE_CONFIG.TABLE_NAME);
+        console.error('   3. Verifica en Airtable que el token tenga acceso a esta base');
+        console.error('   4. Ve a: https://airtable.com/create/tokens y verifica los permisos del token');
+        
+        const errorMessage = errorAny?.response?.data?.error?.message || 
+                           errorAny?.response?.data?.message || 
+                           'Token sin permisos para acceder a esta base de datos';
+        
+        return {
+          success: false,
+          error: `Error de permisos: ${errorMessage}. Verifica que el token tenga acceso a la base de datos.`
+        };
+      }
+      
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorResponse = errorAny?.response?.data?.error;
+      const errorMessageFromResponse = errorAny?.response?.data?.message;
+      
       return {
         success: false,
-        error: 'Error de conexión. Por favor, intenta de nuevo.'
+        error: errorResponse || errorMessageFromResponse || errorMessage || 'Error de conexión. Por favor, intenta de nuevo.'
       };
     }
   }

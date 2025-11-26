@@ -1,10 +1,41 @@
 // Airtable Configuration for Personal Access Tokens
 // Note: Airtable now uses Personal Access Tokens (PATs) with Bearer authentication
 // Your token should start with 'pat' (Personal Access Token)
+const envToken = import.meta.env.VITE_AIRTABLE_PERSONAL_ACCESS_TOKEN;
+const fallbackToken = 'pateQ54vtA6JFAAyN.fca739fac3390851f60d85713590549737ca7ec7cf27ad087c67ae18a02f01be';
+const airtableToken = envToken || fallbackToken;
+
+// Log token status (without exposing full token)
+const baseId = import.meta.env.VITE_AIRTABLE_BASE_ID || 'appHgGF7B9ojxqRnA';
+const tableName = import.meta.env.VITE_AIRTABLE_TABLE_NAME || 'Dashboards';
+
+if (envToken) {
+  console.log('✅ [AIRTABLE] Using token from environment variable');
+  console.log('🔑 [AIRTABLE] Token starts with:', airtableToken.substring(0, 15) + '...');
+  console.log('🔑 [AIRTABLE] Token length:', airtableToken.length);
+  console.log('🔑 [AIRTABLE] Base ID:', baseId);
+  console.log('🔑 [AIRTABLE] Table Name:', tableName);
+} else {
+  console.warn('⚠️ [AIRTABLE] Using fallback token (not from environment)');
+  console.warn('⚠️ [AIRTABLE] Set VITE_AIRTABLE_PERSONAL_ACCESS_TOKEN in .env or Vercel');
+  console.log('🔑 [AIRTABLE] Token starts with:', airtableToken.substring(0, 15) + '...');
+  console.log('🔑 [AIRTABLE] Token length:', airtableToken.length);
+  console.log('🔑 [AIRTABLE] Base ID:', baseId);
+  console.log('🔑 [AIRTABLE] Table Name:', tableName);
+}
+
+// Validate token format
+if (!airtableToken.startsWith('pat')) {
+  console.error('❌ [AIRTABLE] Token format invalid - should start with "pat"');
+} else if (airtableToken.length < 50) {
+  console.error('❌ [AIRTABLE] Token appears to be incomplete (too short)');
+  console.error('❌ [AIRTABLE] Airtable tokens typically have two parts separated by a dot');
+}
+
 export const AIRTABLE_CONFIG = {
-  PERSONAL_ACCESS_TOKEN: import.meta.env.VITE_AIRTABLE_PERSONAL_ACCESS_TOKEN || 'pateQ54vtA6JFAAyN.fca739fac3390851f60d85713590549737ca7ec7cf27ad087c67ae18a02f01be', // Your Personal Access Token
-  BASE_ID: import.meta.env.VITE_AIRTABLE_BASE_ID || 'appHgGF7B9ojxqRnA', // Your Airtable Base ID
-  TABLE_NAME: import.meta.env.VITE_AIRTABLE_TABLE_NAME || 'Dashboards', // Your table name
+  PERSONAL_ACCESS_TOKEN: airtableToken,
+  BASE_ID: baseId, // Your Airtable Base ID
+  TABLE_NAME: tableName, // Your table name
   VIEW_NAME: 'Grid view' // Your view name
 };
 
@@ -66,7 +97,12 @@ export const DASHBOARD_FIELDS = {
   
   // Campos para seguimiento de progreso
   COMPLETED_STEPS: 'completed_steps',
-  STEP_NOTES: 'step_notes'
+  STEP_NOTES: 'step_notes',
+  
+  // Campos para emails programados del plan de acción
+  SCHEDULED_ACTION_PLAN_EMAILS: 'scheduled_action_plan_emails',
+  ACTION_PLAN_EMAILS_LAST_UPDATED: 'action_plan_emails_last_updated',
+  ACTION_PLAN_EMAILS_LAST_PROCESSED: 'action_plan_emails_last_processed'
 };
 
 // Dashboard expiration settings (in days)

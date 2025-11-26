@@ -35,12 +35,29 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess, onBack }) => {
         console.log('✅ Login exitoso, dashboard ID:', result.dashboardId);
         onLoginSuccess(result.dashboardId, email);
       } else {
-        console.log('❌ Login fallido:', result.error);
-        setError(result.error || 'Credenciales incorrectas');
+        // Asegurar que el error sea siempre un string
+        let errorMessage = 'Credenciales incorrectas';
+        if (result.error) {
+          if (typeof result.error === 'string') {
+            errorMessage = result.error;
+          } else if (typeof result.error === 'object' && result.error !== null) {
+            const errorObj = result.error as any;
+            errorMessage = errorObj.message || errorObj.error || String(result.error);
+          }
+        }
+        console.log('❌ Login fallido:', errorMessage);
+        setError(errorMessage);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('❌ Error durante el login:', error);
-      setError('Error de conexión. Por favor, intenta de nuevo.');
+      const errorAny = error as any;
+      
+      // Manejar error 401 específicamente
+      if (errorAny?.response?.status === 401) {
+        setError('Error de autenticación con el servidor. Por favor, contacta al administrador.');
+      } else {
+        setError('Error de conexión. Por favor, intenta de nuevo.');
+      }
     } finally {
       setIsLoading(false);
     }

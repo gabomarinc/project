@@ -9,23 +9,27 @@ if (!API_KEY || typeof API_KEY !== 'string' || API_KEY.length < 10) {
   console.error('❌ Invalid API key:', {
     type: typeof API_KEY,
     length: API_KEY?.length,
-    value: API_KEY
+    value: API_KEY ? 'Present but invalid' : 'Missing'
   });
-  throw new Error('Invalid Gemini API key');
+  throw new Error('Invalid Gemini API key: API key is missing or too short');
 }
 
-// Debug: Confirm API key is loaded
+// Validate API key format (should start with AIzaSy)
+if (!API_KEY.startsWith('AIzaSy')) {
+  console.error('❌ API key format invalid - should start with "AIzaSy"');
+  console.error('💡 Please verify your API key in src/config/apiKeys.ts');
+  throw new Error('Invalid Gemini API key format: API key should start with "AIzaSy"');
+}
+
+// Debug: Confirm API key is loaded (but don't log the full key for security)
+const isFromEnv = !!import.meta.env.VITE_GEMINI_API_KEY;
 console.log('🔑 AI Config: API Key loaded successfully:', {
   keyLength: API_KEY.length,
   keyStart: API_KEY.substring(0, 10) + '...',
-  keyEnd: '...' + API_KEY.substring(API_KEY.length - 10)
+  keyEnd: '...' + API_KEY.substring(API_KEY.length - 10),
+  formatValid: API_KEY.startsWith('AIzaSy'),
+  source: isFromEnv ? 'Environment Variable (VITE_GEMINI_API_KEY) ✅ SECURE' : 'Fallback (Development Only) ⚠️'
 });
-
-// Test the API key immediately
-console.log('🧪 Testing API key immediately...');
-console.log('🔑 API Key value:', API_KEY);
-console.log('🔑 API Key starts with:', API_KEY.startsWith('AIzaSy'));
-console.log('🔑 API Key ends with:', API_KEY.endsWith('ZokfZ0'));
 
 // Initialize Gemini AI with safety check
 let genAI: GoogleGenerativeAI;
@@ -37,21 +41,23 @@ try {
   throw new Error('Failed to initialize AI service');
 }
 
-// Available Gemini models in order of preference (newest first)
+// Available Gemini models in order of preference
+// NOTE: gemini-1.5-flash and older versions are no longer available
+// Google has updated to newer versions (2.0, 2.5, etc.)
+// Based on user's GCP quotas, gemini-2.5-flash is available and active
 const AVAILABLE_MODELS = [
-  'gemini-2.0-flash-exp',  // Working experimental model
-  'gemini-1.5-pro',        // Most stable and reliable
-  'gemini-1.5-flash',      // Fast version
-  'gemini-1.5-flash-001',  // Specific version
-  'gemini-1.5-pro-001',    // Specific pro version
-  'gemini-pro'             // Fallback to older version
+  'gemini-2.5-flash',          // Latest available model (from GCP quotas)
+  'gemini-2.0-flash-exp',      // Experimental 2.0 (fallback)
+  'gemini-1.5-flash',          // Old version (may not be available)
+  'gemini-1.5-pro',            // Old version (may not be available)
+  'gemini-pro'                 // Legacy fallback (may not be available)
 ];
 
 // Function to get the best available model
 const getBestAvailableModel = () => {
   console.log('🔍 Available Gemini models:', AVAILABLE_MODELS);
-  console.log('🚀 Using latest model:', AVAILABLE_MODELS[0]);
-  return AVAILABLE_MODELS[0];
+  console.log('🚀 Using model:', AVAILABLE_MODELS[0], '(gemini-2.5-flash - latest available)');
+  return AVAILABLE_MODELS[0]; // gemini-2.5-flash
 };
 
 // Get the generative model with realistic, consultant-like settings
@@ -73,105 +79,165 @@ export const AI_CONFIG = {
   maxOutputTokens: 8192, // Increased token limit
 };
 
-// Function to test and get working model
-export const getWorkingModel = async () => {
+// Helper function to extract retry delay from error
+const extractRetryDelay = (error: any): number => {
+  try {
+    // Try to extract from error message
+    const retryMatch = error?.message?.match(/retry in ([\d.]+)s/i) || 
+                      error?.message?.match(/retryDelay["']?\s*:\s*"?(\d+)/i);
+    if (retryMatch) {
+      return Math.ceil(parseFloat(retryMatch[1]) * 1000);
+    }
+    
+    // Try to extract from error details
+    if (error?.details && Array.isArray(error.details)) {
+      for (const detail of error.details) {
+        if (detail['@type'] === 'type.googleapis.com/google.rpc.RetryInfo' && detail.retryDelay) {
+          const seconds = parseInt(detail.retryDelay.replace('s', ''));
+          return seconds * 1000;
+        }
+      }
+    }
+  } catch (e) {
+    // Ignore parsing errors
+  }
+  
+  // Default retry delay for 429 errors
+  return 30000; // 30 seconds
+};
+
+// Helper function to wait
+const wait = (ms: number): Promise<void> => {
+  return new Promise(resolve => setTimeout(resolve, ms));
+};
+
+// Function to test and get working model with intelligent retry
+export const getWorkingModel = async (retryCount: number = 0): Promise<any> => {
   // Safety check: ensure genAI is properly initialized
   if (!genAI) {
     console.error('❌ genAI is not initialized');
     throw new Error('GoogleGenerativeAI not initialized');
   }
   
-  console.log('🔍 Testing available models in order...');
+  const MAX_RETRIES = 3;
   
-  for (const modelName of AVAILABLE_MODELS) {
+  // Prevent infinite retries
+  if (retryCount >= MAX_RETRIES) {
+    throw new Error('Max retries exceeded');
+  }
+  
+  console.log(`🔍 Testing Gemini models (attempt ${retryCount + 1}/${MAX_RETRIES})...`);
+  
+  let all403Errors = true; // Track if all errors are 403
+  
+  // Try all models in order until one works
+  for (let modelIndex = 0; modelIndex < AVAILABLE_MODELS.length; modelIndex++) {
+    const modelName = AVAILABLE_MODELS[modelIndex];
+    console.log(`🧪 Testing model ${modelIndex + 1}/${AVAILABLE_MODELS.length}: ${modelName}`);
+    
     try {
-      console.log(`🧪 Testing model: ${modelName}`);
-      
-      // Safety check: ensure modelName is valid
-      if (!modelName || typeof modelName !== 'string') {
-        console.warn(`⚠️ Invalid model name: ${modelName}, skipping...`);
-        continue;
-      }
-      
       const testModel = genAI.getGenerativeModel({ 
         model: modelName,
         generationConfig: AI_CONFIG
       });
       
-      // Safety check: ensure testModel is properly created
-      if (!testModel) {
-        console.warn(`⚠️ Failed to create model for ${modelName}, skipping...`);
-        continue;
-      }
-      
-      // Safety check: ensure generateContent method exists
-      if (typeof testModel.generateContent !== 'function') {
-        console.warn(`⚠️ Model ${modelName} missing generateContent method, skipping...`);
-        continue;
-      }
-      
-      console.log(`🔄 Attempting to generate content with ${modelName}...`);
-      const result = await testModel.generateContent('Say "Hello"');
-      
-      // Safety check: ensure result is valid
-      if (!result) {
-        console.warn(`⚠️ Model ${modelName} returned null result, skipping...`);
-        continue;
-      }
-      
+      // Quick test with minimal prompt
+      const result = await testModel.generateContent('Hi');
       const response = await result.response;
-      
-      // Safety check: ensure response is valid
-      if (!response) {
-        console.warn(`⚠️ Model ${modelName} returned null response, skipping...`);
-        continue;
-      }
-      
       const text = response.text();
       
-      // Safety check: ensure text method exists and works
-      if (typeof text !== 'string') {
-        console.warn(`⚠️ Model ${modelName} text() returned non-string: ${typeof text}, skipping...`);
+      if (text && typeof text === 'string') {
+        console.log(`✅ Model ${modelName} working! Using for all AI operations.`);
+        return testModel;
+      }
+    } catch (error: any) {
+      const errorStatus = error?.status || error?.response?.status;
+      const errorMessage = error?.message || String(error);
+      
+      // If not 403, mark that we have non-403 errors
+      if (errorStatus !== 403) {
+        all403Errors = false;
+      }
+      
+      // Handle rate limit (429) - wait and retry
+      if (errorStatus === 429) {
+        const retryDelay = extractRetryDelay(error);
+        console.log(`⏰ Model ${modelName} rate limited (429). Waiting ${retryDelay / 1000}s before retry...`);
+        
+        // If we haven't exceeded max retries, wait and try again
+        if (retryCount < MAX_RETRIES - 1) {
+          await wait(retryDelay);
+          console.log(`🔄 Retrying after rate limit cooldown...`);
+          return getWorkingModel(retryCount + 1);
+        } else {
+          console.log(`⚠️ Max retries reached for rate limit. Trying next model...`);
+          continue; // Try next model
+        }
+      }
+      
+      // Handle model not found (404) - try next model
+      if (errorStatus === 404) {
+        console.log(`🚫 Model ${modelName} not found (404) - trying next model`);
         continue;
       }
       
-      console.log(`✅ Model ${modelName} working! Response: ${text}`);
-      console.log(`🎯 Using model: ${modelName} for all AI operations`);
-      return testModel;
-    } catch (error) {
-      console.log(`❌ Model ${modelName} failed:`, {
-        error: error.message,
-        status: error.status,
-        code: error.code,
-        details: error.details
-      });
-      
-      // Check if it's a 404 error (model not found)
-      if (error.status === 404) {
-        console.log(`🚫 Model ${modelName} not found (404) - this model may not be available in your region`);
-      } else if (error.status === 403) {
-        console.log(`🔒 Model ${modelName} access denied (403) - check API key permissions`);
-      } else if (error.status === 429) {
-        console.log(`⏰ Model ${modelName} rate limited (429) - too many requests`);
+      // Handle permission denied (403) - try next model but track it
+      if (errorStatus === 403) {
+        console.log(`🔒 Model ${modelName} access denied (403) - trying next model`);
+        continue;
       }
       
-      continue;
+      // For other errors, log and try next model
+      console.log(`❌ Model ${modelName} failed:`, {
+        error: errorMessage.substring(0, 100),
+        status: errorStatus,
+        code: error?.code
+      });
+      
+      // If it's a network error and we have retries left, retry this model
+      if ((errorStatus >= 500 || !errorStatus) && retryCount < MAX_RETRIES - 1) {
+        console.log(`🔄 Network/server error, retrying model ${modelName}...`);
+        await wait(2000 * (retryCount + 1)); // Exponential backoff
+        return getWorkingModel(retryCount + 1);
+      }
+      
+      continue; // Try next model
     }
   }
   
-  console.error('❌ All models failed, using fallback');
-  console.error('🔍 This could be due to:');
-  console.error('   - API key issues');
-  console.error('   - Model availability in your region');
-  console.error('   - Quota limits');
-  console.error('   - Network connectivity');
-  
-  // Safety check: ensure fallback model is valid
-  if (!model) {
-    console.error('❌ Fallback model is also null/undefined');
-    throw new Error('No working AI model available');
+  // If ALL models returned 403, it's definitely an API key issue - don't retry
+  if (all403Errors) {
+    console.error('❌ CRITICAL: All models returned 403 (Forbidden)');
+    console.error('🔑 This indicates an API key problem:');
+    console.error('   - API key may be invalid or expired');
+    console.error('   - API key may not have proper permissions');
+    console.error('   - API key may be restricted to certain models/regions');
+    console.error('   - API key may have been revoked');
+    console.error('');
+    console.error('💡 Solutions:');
+    console.error('   1. Verify your API key in Google AI Studio: https://aistudio.google.com/apikey');
+    console.error('   2. Check that the API key has access to Gemini models');
+    console.error('   3. Generate a new API key if needed');
+    console.error('   4. Ensure the API key is correctly set in src/config/apiKeys.ts');
+    
+    throw new Error('API_KEY_INVALID: All Gemini models returned 403 Forbidden. Please check your API key configuration.');
   }
   
-  console.log('🔄 Using fallback model as last resort');
-  return model; // Return the default model as last resort
+  // If all models failed with mixed errors and we have retries left, wait and try again
+  if (retryCount < MAX_RETRIES - 1) {
+    const waitTime = 5000 * (retryCount + 1); // Exponential backoff: 5s, 10s, 15s
+    console.log(`⏳ All models failed. Waiting ${waitTime / 1000}s before retrying all models...`);
+    await wait(waitTime);
+    return getWorkingModel(retryCount + 1);
+  }
+  
+  // All models failed after all retries
+  console.error('❌ All Gemini models failed after all retries');
+  console.error('🔍 This could be due to:');
+  console.error('   - API key issues');
+  console.error('   - All models rate limited');
+  console.error('   - Network connectivity issues');
+  console.error('   - Google API service outage');
+  
+  throw new Error('No working Gemini model available after all retries');
 };

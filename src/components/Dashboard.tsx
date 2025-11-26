@@ -123,6 +123,11 @@ const Dashboard: React.FC<DashboardProps> = ({ name, email, idea, problem, ideal
 
   // Mobile menu state
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  // Estado para modal de crear nuevo dashboard
+  const [showNewDashboardModal, setShowNewDashboardModal] = useState(false);
+  const [isCreatingNewDashboard, setIsCreatingNewDashboard] = useState(false);
+  const [userHasPayment, setUserHasPayment] = useState(false);
 
   // Close mobile menu on scroll
   useEffect(() => {
@@ -2008,6 +2013,59 @@ const Dashboard: React.FC<DashboardProps> = ({ name, email, idea, problem, ideal
     console.log('Derivando a Kônsul Bills...');
   };
 
+  // Función para crear nuevo dashboard
+  const handleCreateNewDashboard = async () => {
+    setIsCreatingNewDashboard(true);
+    
+    try {
+      console.log('🚀 Creando nuevo dashboard...');
+      
+      // Verificar si el usuario tiene pago registrado
+      const hasPayment = await AirtableService.hasUserEverPaid(email);
+      
+      if (!hasPayment) {
+        // Si no tiene pago, redirigir al proceso de pago
+        alert('Para crear un nuevo dashboard, necesitas completar el proceso de pago primero.');
+        window.open('https://buy.stripe.com/cNi5kD1KX5zkfgUdAsgjC02', '_blank');
+        setShowNewDashboardModal(false);
+        setIsCreatingNewDashboard(false);
+        return;
+      }
+      
+      // Si tiene pago, desactivar el dashboard actual y volver al formulario
+      // El dashboard actual se desactivará automáticamente cuando se cree el nuevo
+      console.log('✅ Usuario tiene pago registrado, puede crear nuevo dashboard sin pago');
+      
+      // Cerrar el modal
+      setShowNewDashboardModal(false);
+      
+      // Desactivar el dashboard actual antes de volver
+      if (dashboardId) {
+        try {
+          // Buscar el dashboard actual y desactivarlo
+          const currentDashboard = await AirtableService.getDashboardById(dashboardId);
+          if (currentDashboard.success && currentDashboard.dashboard) {
+            await AirtableService.deactivateAllActiveDashboards(email);
+            console.log('✅ Dashboard actual desactivado');
+          }
+        } catch (error) {
+          console.error('⚠️ Error al desactivar dashboard actual:', error);
+          // Continuar de todas formas
+        }
+      }
+      
+      // Volver al formulario inicial para crear nuevo dashboard
+      // Limpiar estados y volver a la pantalla de bienvenida
+      onBack();
+      
+    } catch (error) {
+      console.error('❌ Error al crear nuevo dashboard:', error);
+      alert('Error al crear nuevo dashboard. Por favor, intenta de nuevo.');
+    } finally {
+      setIsCreatingNewDashboard(false);
+    }
+  };
+
   // ===== FUNCIONES DE SESIÓN DE USUARIO =====
   
   // Verificar estado de pago desde Airtable
@@ -2706,6 +2764,9 @@ const Dashboard: React.FC<DashboardProps> = ({ name, email, idea, problem, ideal
       }
     } else {
       console.warn('⚠️ VITE_EMAILJS_ACTION_PLAN_TEMPLATE_ID not configured. Action plan reminder emails will not be sent.');
+      console.warn('💡 IMPORTANT: In Vercel, the variable MUST be named: VITE_EMAILJS_ACTION_PLAN_TEMPLATE_ID');
+      console.warn('💡 Variables without VITE_ prefix are NOT available in the frontend');
+      console.warn('💡 Current value:', import.meta.env.VITE_EMAILJS_ACTION_PLAN_TEMPLATE_ID || 'undefined');
     }
   }, []);
 
@@ -2724,27 +2785,36 @@ const Dashboard: React.FC<DashboardProps> = ({ name, email, idea, problem, ideal
             ? `${window.location.origin}?preview=${dashboardId || previewSessionId || ''}` 
             : '';
           
-          actionPlanEmailScheduler.scheduleAllStepEmails(
-            email,
-            name,
-            idea,
-            aiContent.actionPlan,
-            actionPlanDeadlines,
-            dashboardUrl
-          );
-          
-          // Mostrar información de los emails programados en consola
-          const emailInfo = actionPlanEmailScheduler.getConfigurationInfo();
-          console.log('📧 Action Plan Emails Programmed:', {
-            totalScheduled: emailInfo.scheduledCount,
-            emails: emailInfo.scheduledEmails.map(e => ({
-              paso: e.stepNumber,
-              fechaEnvio: e.sendDate,
-              fechaVencimiento: e.dueDate,
-              diasHastaEnvio: e.daysUntilSend,
-              confirmacion: `✅ Email programado para enviarse ${e.daysUntilSend} día(s) antes del vencimiento`
-            }))
-          });
+          // Programar emails (también los guarda en servidor para envío en segundo plano)
+          // Usar función async dentro del useEffect
+          (async () => {
+            try {
+              await actionPlanEmailScheduler.scheduleAllStepEmails(
+                email,
+                name,
+                idea,
+                aiContent.actionPlan,
+                actionPlanDeadlines,
+                dashboardUrl,
+                dashboardId || previewSessionId
+              );
+              
+              // Mostrar información de los emails programados en consola
+              const emailInfo = actionPlanEmailScheduler.getConfigurationInfo();
+              console.log('📧 Action Plan Emails Programmed:', {
+                totalScheduled: emailInfo.scheduledCount,
+                emails: emailInfo.scheduledEmails.map(e => ({
+                  paso: e.stepNumber,
+                  fechaEnvio: e.sendDate,
+                  fechaVencimiento: e.dueDate,
+                  diasHastaEnvio: e.daysUntilSend,
+                  confirmacion: `✅ Email programado para enviarse ${e.daysUntilSend} día(s) antes del vencimiento`
+                }))
+              });
+            } catch (error) {
+              console.error('❌ Error scheduling action plan emails:', error);
+            }
+          })();
         }
       }
       
@@ -3056,6 +3126,21 @@ const Dashboard: React.FC<DashboardProps> = ({ name, email, idea, problem, ideal
           </div>
           
           <div className="flex items-center gap-2 lg:gap-3 flex-wrap">
+            {/* Botón para crear nuevo dashboard */}
+            <button
+              onClick={async () => {
+                // Verificar si el usuario tiene pago registrado
+                const hasPayment = await AirtableService.hasUserEverPaid(email);
+                setUserHasPayment(hasPayment);
+                setShowNewDashboardModal(true);
+              }}
+              className="flex items-center gap-2 px-3 lg:px-4 py-2 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-500/30 rounded-lg text-cyan-300 hover:text-cyan-200 hover:border-cyan-400 transition-all duration-300 text-sm"
+            >
+              <Rocket className="w-4 h-4" />
+              <span className="hidden sm:inline">Nuevo Dashboard</span>
+              <span className="sm:hidden">Nuevo</span>
+            </button>
+            
             <button
               onClick={handleExportPDF}
               disabled={isExportingPDF}
@@ -4962,7 +5047,113 @@ const Dashboard: React.FC<DashboardProps> = ({ name, email, idea, problem, ideal
                       </div>
                     </div>
                 </div>
+      )}
+
+      {/* Modal de Confirmación para Crear Nuevo Dashboard */}
+      {showNewDashboardModal && (
+        <div 
+          className="fixed inset-0 z-50 bg-gray-900/95 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300"
+          onClick={() => !isCreatingNewDashboard && setShowNewDashboardModal(false)}
+        >
+          <div 
+            className="bg-gray-800 border border-gray-700 rounded-2xl p-6 sm:p-8 max-w-md w-full shadow-2xl animate-in zoom-in duration-300"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 rounded-lg">
+                <Rocket className="w-6 h-6 text-cyan-400" />
+              </div>
+              <h2 className="text-xl sm:text-2xl font-bold text-white">Crear Nuevo Dashboard</h2>
+            </div>
+
+            {/* Contenido */}
+            <div className="space-y-4 mb-6">
+              {userHasPayment ? (
+                <>
+                  <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="text-yellow-400 text-xl">⚠️</div>
+                      <div className="flex-1">
+                        <p className="text-yellow-300 font-medium mb-2">Dashboard Actual se Inhabilitará</p>
+                        <p className="text-yellow-200/80 text-sm">
+                          Al crear un nuevo dashboard, el dashboard actual quedará <strong>inhabilitado</strong> pero se mantendrá guardado en tu historial.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="text-green-400 text-xl">✅</div>
+                      <div className="flex-1">
+                        <p className="text-green-300 font-medium mb-1">Sin Pago Adicional</p>
+                        <p className="text-green-200/80 text-sm">
+                          Como ya tienes un pago registrado, puedes crear este nuevo dashboard <strong>sin costo adicional</strong>.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="text-yellow-400 text-xl">⚠️</div>
+                      <div className="flex-1">
+                        <p className="text-yellow-300 font-medium mb-2">Dashboard Actual se Inhabilitará</p>
+                        <p className="text-yellow-200/80 text-sm">
+                          Al crear un nuevo dashboard, el dashboard actual quedará <strong>inhabilitado</strong> pero se mantendrá guardado en tu historial.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="text-blue-400 text-xl">💳</div>
+                      <div className="flex-1">
+                        <p className="text-blue-300 font-medium mb-1">Pago Requerido</p>
+                        <p className="text-blue-200/80 text-sm">
+                          Para crear un nuevo dashboard, necesitarás completar el proceso de pago.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </>
               )}
+            </div>
+
+            {/* Botones */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowNewDashboardModal(false)}
+                disabled={isCreatingNewDashboard}
+                className="flex-1 px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-gray-300 hover:text-white hover:bg-gray-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleCreateNewDashboard}
+                disabled={isCreatingNewDashboard}
+                className="flex-1 px-4 py-3 bg-gradient-to-r from-cyan-500 via-green-500 to-blue-600 text-white rounded-lg hover:shadow-lg hover:shadow-cyan-500/25 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2"
+              >
+                {isCreatingNewDashboard ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span>Creando...</span>
+                  </>
+                ) : (
+                  <>
+                    <Rocket className="w-4 h-4" />
+                    <span>Crear Nuevo</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modales de Sesión */}
       {showLogin && (

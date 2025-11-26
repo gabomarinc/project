@@ -2,6 +2,8 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
+import './utils/testGeminiConnection'; // Load test function for console
+import './utils/diagnoseGemini'; // Load diagnostic function for console
 
 // Global error handler for unhandled promise rejections
 window.addEventListener('unhandledrejection', (event) => {

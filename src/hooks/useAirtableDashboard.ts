@@ -6,7 +6,7 @@ interface UseAirtableDashboardReturn {
   isLoading: boolean;
   error: string | null;
   isExpired: boolean;
-  createOrUpdateDashboard: (email: string, dashboardData: any, projectInfo: any) => Promise<boolean>;
+  createOrUpdateDashboard: (email: string, dashboardData: any, projectInfo: any, replaceExisting?: boolean) => Promise<boolean>;
   extendDashboard: () => Promise<boolean>;
   deleteDashboard: () => Promise<boolean>;
   refreshDashboard: () => Promise<void>;
@@ -57,10 +57,13 @@ export const useAirtableDashboard = (email: string): UseAirtableDashboardReturn 
   }, [email]);
 
   // Create or update dashboard
+  // replaceExisting: si es true, siempre crea un nuevo dashboard (desactivando los anteriores)
+  // si es false, actualiza el dashboard activo existente si existe
   const createOrUpdateDashboard = useCallback(async (
     email: string, 
     dashboardData: any, 
-    projectInfo: any
+    projectInfo: any,
+    replaceExisting: boolean = true // Por defecto, reemplazar (crear nuevo)
   ): Promise<boolean> => {
     if (!email || email.trim().length === 0) {
       console.error('❌ Cannot create/update dashboard - email is empty');
@@ -71,21 +74,29 @@ export const useAirtableDashboard = (email: string): UseAirtableDashboardReturn 
     setError(null);
 
     try {
-      // First check if dashboard exists
-      const existingResult = await AirtableService.findDashboardByEmail(email);
-      
       let result: DashboardSearchResult;
       
-      if (existingResult.success && existingResult.dashboard) {
-        // Update existing dashboard
-        result = await AirtableService.updateDashboard(
-          existingResult.dashboard.id!,
-          dashboardData,
-          projectInfo
-        );
-      } else {
-        // Create new dashboard
+      if (replaceExisting) {
+        // Modo reemplazo: siempre crear un nuevo dashboard
+        // El método createDashboard ya desactiva automáticamente los dashboards activos anteriores
+        console.log('🔄 Modo reemplazo: creando nuevo dashboard (desactivando anteriores)');
         result = await AirtableService.createDashboard(email, dashboardData, projectInfo);
+      } else {
+        // Modo actualización: buscar dashboard activo y actualizarlo, o crear si no existe
+        console.log('🔄 Modo actualización: buscando dashboard activo para actualizar');
+        const existingResult = await AirtableService.findDashboardByEmail(email, true);
+        
+        if (existingResult.success && existingResult.dashboard) {
+          // Update existing active dashboard
+          result = await AirtableService.updateDashboard(
+            existingResult.dashboard.id!,
+            dashboardData,
+            projectInfo
+          );
+        } else {
+          // Create new dashboard if no active one exists
+          result = await AirtableService.createDashboard(email, dashboardData, projectInfo);
+        }
       }
 
       if (result.success && result.dashboard) {

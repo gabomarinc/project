@@ -14,6 +14,19 @@ import { EmailService } from './services/emailService';
 import jsPDF from 'jspdf';
 
 function App() {
+  // Test Gemini connection on app load
+  useEffect(() => {
+    console.log('🧪 [App] Testing Gemini API connection...');
+    AIService.testAIConnection().then((success: boolean) => {
+      if (success) {
+        console.log('✅ [App] Gemini API connection test: SUCCESS');
+      } else {
+        console.error('❌ [App] Gemini API connection test: FAILED');
+        console.error('💡 [App] Ejecuta testGeminiConnection() en la consola para más detalles');
+      }
+    });
+  }, []);
+
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState('');
@@ -34,6 +47,7 @@ function App() {
   const [isSessionCreated, setIsSessionCreated] = useState(false);
   const [showCredentialsModal, setShowCredentialsModal] = useState(false);
   const [generatedCredentials, setGeneratedCredentials] = useState({ email: '', password: '' });
+  const [userHasPreviousPayment, setUserHasPreviousPayment] = useState(false);
   const [aiPreviewContent, setAiPreviewContent] = useState<{
     executiveSummary?: string;
     strongPoint?: string;
@@ -479,29 +493,38 @@ function App() {
     
     if (name.trim() && email.trim() && idea.trim() && problem.trim() && idealUser.trim() && region && alternatives.trim() && businessModel && projectType && acceptedTerms) {
       console.log('All fields valid, generating AI preview...');
+      console.log('🧹 Clearing any previous preview data to ensure fresh generation...');
+      // Clear any previous preview data to ensure fresh generation
+      setAiPreviewContent(null);
+      setPreviewSessionId('');
       setIsGeneratingPreview(true);
       
       try {
         console.log('🤖 Calling generatePreviewContent...');
+        console.log('📊 Form data for preview generation:', {
+          idea: idea.trim(),
+          problem: problem.trim(),
+          idealUser: idealUser.trim(),
+          region,
+          alternatives: alternatives.trim(),
+          businessModel,
+          projectType
+        });
         const previewContent = await generatePreviewContent();
         console.log('✅ generatePreviewContent completed, result:', previewContent);
         console.log('✅ generatePreviewContent type:', typeof previewContent);
         console.log('✅ generatePreviewContent is null:', previewContent === null);
         console.log('✅ generatePreviewContent is undefined:', previewContent === undefined);
-        // Ensure previewContent is never null
-        const safePreviewContent = (previewContent || {
-          executiveSummary: 'Análisis en progreso...',
-          strongPoint: 'Validando tu idea...',
-          criticalRisks: ['Analizando riesgos...'],
-          actionableRecommendation: 'Generando recomendaciones...',
-          dataBackedInsights: false,
-          externalData: {},
-          brandSuggestions: [],
-          brandReasoning: [],
-          intelligentlySearched: false,
-          searchQueries: []
-        }) as any;
-        setAiPreviewContent(safePreviewContent as any);
+        
+        // Check if preview content was actually generated
+        if (!previewContent || !previewContent.executiveSummary) {
+          console.error('❌ Preview content generation failed or returned empty content');
+          throw new Error('No se pudo generar el contenido del preview. Por favor, intenta de nuevo.');
+        }
+        
+        // Use the actual generated content, not fallback
+        setAiPreviewContent(previewContent as any);
+        console.log('✅ Preview content set successfully:', previewContent);
         
         // Save preview session to Airtable
         console.log('💾 Saving preview session to Airtable...');
@@ -518,15 +541,15 @@ function App() {
         
         console.log('🔄 About to call AirtableService.createPreviewSession...');
         console.log('📧 Email:', email);
-        console.log('📊 Safe preview content:', safePreviewContent);
-        console.log('📊 Safe preview content type:', typeof safePreviewContent);
-        console.log('📊 Safe preview content keys:', Object.keys(safePreviewContent || {}));
+        console.log('📊 Preview content:', previewContent);
+        console.log('📊 Preview content type:', typeof previewContent);
+        console.log('📊 Preview content keys:', Object.keys(previewContent || {}));
         console.log('📋 Project info:', projectInfo);
         console.log('📋 Project info type:', typeof projectInfo);
         console.log('📋 Project info keys:', Object.keys(projectInfo || {}));
         
         console.log('🔄 Calling AirtableService.createPreviewSession...');
-        const previewResult = await AirtableService.createPreviewSession(email, safePreviewContent, projectInfo);
+        const previewResult = await AirtableService.createPreviewSession(email, previewContent, projectInfo);
         console.log('✅ AirtableService.createPreviewSession completed');
         console.log('📋 Preview result received:', previewResult);
         console.log('📋 Preview result success:', previewResult.success);
@@ -624,14 +647,41 @@ function App() {
     }
   };
 
-  const handleBackToWelcome = () => {
+  const handleBackToWelcome = async () => {
     setShowDashboard(false);
     setDashboardAIContent(null);
     setShowLogin(false);
+    // Clear all preview-related states to force fresh generation
+    setAiPreviewContent(null);
+    setPreviewSessionId('');
+    setShowPreview(false);
+    setIsGeneratingPreview(false);
+    setIsDashboardUnlocked(false);
+    setIsPaymentRegistered(false);
+    setDashboardId('');
+    
+    // Verificar si el usuario tiene pago previo antes de mostrar el formulario
+    if (email && email.trim().length > 0) {
+      try {
+        const hasPayment = await AirtableService.hasUserEverPaid(email);
+        setUserHasPreviousPayment(hasPayment);
+        console.log('💳 Usuario tiene pago previo:', hasPayment);
+      } catch (error) {
+        console.error('❌ Error verificando pago previo:', error);
+        setUserHasPreviousPayment(false);
+      }
+    } else {
+      setUserHasPreviousPayment(false);
+    }
+    
+    // Show form to allow creating new dashboard
+    setShowForm(true);
     // Clear URL parameters when going back
     const newUrl = window.location.pathname;
     window.history.pushState({}, '', newUrl);
     console.log('🔗 URL cleared, returning to welcome page');
+    console.log('🧹 All preview states cleared for fresh dashboard creation');
+    console.log('📝 Form shown for new dashboard creation');
   };
 
   const handleLoginSuccess = async (dashboardId: string, userEmail: string) => {
@@ -693,18 +743,26 @@ function App() {
   };
 
   const handleContinueToDashboard = async () => {
-    // Check if dashboard is unlocked before proceeding
-    if (previewSessionId) {
-      const isUnlocked = await checkDashboardUnlockStatus(previewSessionId);
-      if (!isUnlocked) {
-        console.log('🔒 Dashboard is locked, cannot proceed');
-        alert('El dashboard completo no está desbloqueado. Por favor, completa el proceso de pago para acceder al dashboard completo.');
+    // Verificar si el usuario tiene pago registrado en cualquier momento
+    const hasPayment = email ? await AirtableService.hasUserEverPaid(email) : false;
+    
+    if (hasPayment) {
+      console.log('✅ Usuario tiene pago registrado, puede crear dashboard sin verificar unlock status');
+      // Si tiene pago, permitir continuar sin verificar unlock status
+    } else {
+      // Si no tiene pago, verificar unlock status del preview
+      if (previewSessionId) {
+        const isUnlocked = await checkDashboardUnlockStatus(previewSessionId);
+        if (!isUnlocked) {
+          console.log('🔒 Dashboard is locked, cannot proceed');
+          alert('El dashboard completo no está desbloqueado. Por favor, completa el proceso de pago para acceder al dashboard completo.');
+          return;
+        }
+      } else {
+        console.log('🔒 No preview session ID, cannot proceed');
+        alert('No se encontró la sesión del preview. Por favor, genera un nuevo preview.');
         return;
       }
-    } else {
-      console.log('🔒 No preview session ID, cannot proceed');
-      alert('No se encontró la sesión del preview. Por favor, genera un nuevo preview.');
-      return;
     }
 
     // Create full dashboard with new ID
@@ -1444,6 +1502,7 @@ function App() {
           // Redirigir al link de renovación
           window.open('https://buy.stripe.com/cNi5kD1KX5zkfgUdAsgjC02', '_blank');
         }}
+        userHasPreviousPayment={userHasPreviousPayment}
       />
     );
   }

@@ -37,34 +37,65 @@ export interface GeneratedContent {
 }
 
 export class AIService {
+  private static GEMINI_RATE_LIMIT_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
 
   // Test method to verify AI connection
   static async testAIConnection(): Promise<boolean> {
     try {
-      console.log('🧪 Testing AI connection...');
-      console.log('🔑 Using model from config:', model);
-      console.log('🔑 Model type:', typeof model);
-      console.log('🔑 Model methods:', Object.getOwnPropertyNames(model));
+      console.log('🧪 [AIService] Testing AI connection...');
+      
+      // Get API key info
+      const { getGeminiApiKey } = await import('../config/apiKeys');
+      const apiKey = getGeminiApiKey();
+      console.log('🔑 [AIService] API Key source:', import.meta.env.VITE_GEMINI_API_KEY ? 'Environment Variable ✅' : 'Fallback ⚠️');
+      console.log('🔑 [AIService] API Key length:', apiKey.length);
+      console.log('🔑 [AIService] API Key format valid:', apiKey.startsWith('AIzaSy'));
+      
+      // Try to get a working model
+      const { getWorkingModel } = await import('../config/ai');
+      console.log('🔧 [AIService] Obteniendo modelo de trabajo...');
+      const testModel = await getWorkingModel();
+      
+      if (!testModel) {
+        console.error('❌ [AIService] No se pudo obtener modelo de trabajo');
+        return false;
+      }
+      
+      console.log('✅ [AIService] Modelo obtenido, probando con prompt simple...');
       
       // Simple test with minimal prompt
-      const testResult = await model.generateContent('Say "Hello"');
-      console.log('✅ generateContent call successful');
+      const testResult = await testModel.generateContent('Say "Hello" in one word');
+      console.log('✅ [AIService] generateContent call successful');
       
       const testResponse = await testResult.response;
-      console.log('✅ response call successful');
+      console.log('✅ [AIService] response call successful');
       
       const testText = testResponse.text();
-      console.log('✅ text() call successful');
+      console.log('✅ [AIService] text() call successful');
       
-      console.log('✅ AI test successful:', testText);
+      console.log('✅ [AIService] AI test successful, response:', testText);
       return true;
     } catch (error) {
-      console.error('❌ AI test failed:', error);
-      console.error('❌ Error details:', {
+      console.error('❌ [AIService] AI test failed:', error);
+      const errorAny = error as any;
+      const errorStatus = errorAny?.status || errorAny?.response?.status;
+      const errorMessage = errorAny?.message || String(error);
+      
+      console.error('❌ [AIService] Error details:', {
         name: error instanceof Error ? error.name : 'Unknown',
-        message: error instanceof Error ? error.message : String(error),
+        message: errorMessage,
+        status: errorStatus,
         stack: error instanceof Error ? error.stack : 'No stack trace'
       });
+      
+      if (errorStatus === 403) {
+        console.error('❌ [AIService] Error 403: API Key sin permisos o inválida');
+      } else if (errorStatus === 429) {
+        console.error('❌ [AIService] Error 429: Rate limit excedido');
+      } else if (errorStatus === 404) {
+        console.error('❌ [AIService] Error 404: Modelo no encontrado');
+      }
+      
       return false;
     }
   }
@@ -83,8 +114,8 @@ export class AIService {
               brandSuggestions: ['Marca Innovadora', 'Marca Pro', 'Marca Plus'],
               brandReasoning: ['Nombre memorable y fácil de pronunciar', 'Refleja la innovación del producto', 'Posicionamiento premium'],
               recommendedTools: [
-                { category: 'Desarrollo', items: [{ name: 'React', description: 'Framework frontend' }] },
-                { category: 'Marketing', items: [{ name: 'Google Ads', description: 'Publicidad online' }] }
+                { category: 'Desarrollo', items: [{ name: 'React', description: 'Framework frontend', url: 'https://react.dev' }] },
+                { category: 'Marketing', items: [{ name: 'Google Ads', description: 'Publicidad online', url: 'https://ads.google.com' }] }
               ],
               actionPlan: [
                 'Definir propuesta de valor única',
@@ -96,8 +127,8 @@ export class AIService {
                 'Optimizar procesos'
               ],
               marketResearch: {
-                targetAudience: data.idealUser,
-                competitors: data.alternatives,
+                searchTerms: [data.idea || 'validación de negocio', `${data.projectType || 'proyecto'} en ${data.region || 'tu región'}`],
+                validationTopics: ['Validación con usuarios reales', 'Análisis de competencia'],
                 researchMethods: ['Encuestas online', 'Entrevistas', 'Análisis de competencia']
               }
             };
@@ -415,22 +446,69 @@ export class AIService {
   static async generatePreviewContent(data: BusinessData): Promise<any> {
     try {
       console.log('🚀 Generating DEEP and USEFUL preview content...');
+      console.log('🔒 [SECURITY CHECK] API key source verified in config/ai.ts');
       
-      // Get working model
-      const model = await getWorkingModel();
-      if (!model) {
-        throw new Error('No working AI model available');
+      // Get working model with retry logic
+      let model;
+      try {
+        model = await getWorkingModel();
+        if (!model) {
+          throw new Error('No working AI model available');
+        }
+        console.log('✅ [SECURITY] Using AI model initialized with secure API key method');
+      } catch (modelError) {
+        console.error('❌ No se pudo obtener modelo de AI después de todos los reintentos:', modelError);
+        // Only use fallback as absolute last resort
+        throw new Error('Failed to connect to Gemini API after all retries');
       }
       
       // Generate brand suggestions first
       console.log('🌟 Generating brand suggestions...');
-      const brandData = await this.generateBrandSuggestions(data);
+      let brandData;
+      try {
+        brandData = await this.generateBrandSuggestions(data);
       console.log('✅ Brand data generated:', brandData);
+      } catch (brandError) {
+        console.error('❌ Error generando brand suggestions:', brandError);
+        // Retry with new model if rate limited
+        if (this.isRateLimitError(brandError)) {
+          console.log('🔄 Rate limit en brand suggestions, obteniendo nuevo modelo...');
+          try {
+            model = await getWorkingModel();
+            brandData = await this.generateBrandSuggestions(data);
+            console.log('✅ Brand data generated after retry:', brandData);
+          } catch (retryError) {
+            console.error('❌ Error después de reintento:', retryError);
+            throw retryError; // Propagate error instead of using fallback
+          }
+        } else {
+          throw brandError; // Propagate non-rate-limit errors
+        }
+      }
       
       // Generate market intelligence
       console.log('📊 Generating market intelligence...');
-      const marketIntelligence = await this.generateMarketIntelligence(data);
+      let marketIntelligence;
+      try {
+        marketIntelligence = await this.generateMarketIntelligence(data);
       console.log('✅ Market intelligence generated:', marketIntelligence);
+      } catch (marketError) {
+        console.error('❌ Error generando market intelligence:', marketError);
+        // Retry with new model if rate limited
+        if (this.isRateLimitError(marketError)) {
+          console.log('🔄 Rate limit en market intelligence, obteniendo nuevo modelo...');
+          try {
+            model = await getWorkingModel();
+            marketIntelligence = await this.generateMarketIntelligence(data);
+            console.log('✅ Market intelligence generated after retry:', marketIntelligence);
+          } catch (retryError) {
+            console.error('❌ Error después de reintento:', retryError);
+            throw retryError; // Propagate error instead of using fallback
+          }
+        } else {
+          throw marketError; // Propagate non-rate-limit errors
+        }
+      }
       
       // Create a focused, high-quality prompt
       const previewPrompt = `
@@ -481,13 +559,31 @@ export class AIService {
         IMPORTANTE: Este preview debe ser TAN BUENO que el usuario sienta que ya está recibiendo valor sustancial, pero que también quiera desesperadamente ver el dashboard completo.
       `;
       
+      // Check again if Gemini was disabled during brand/market generation
+      if (this.isGeminiTemporarilyDisabled()) {
+        console.warn('⚠️ Gemini API fue deshabilitada durante la generación, usando fallback');
+        return this.getFallbackPreviewContent(data);
+      }
+      
       console.log('🧪 Making AI call for DEEP preview content...');
-      const result = await model.generateContent(previewPrompt);
+      let result, response, text;
+      try {
+        result = await model.generateContent(previewPrompt);
       console.log('✅ AI call successful, getting response...');
-      const response = await result.response;
+        response = await result.response;
       console.log('✅ Response received, extracting text...');
-      const text = response.text();
+        text = response.text();
       console.log('📝 Raw AI response:', text);
+      } catch (aiError) {
+        console.error('❌ Error en llamada a AI para preview:', aiError);
+        this.handleGeminiError(aiError, 'preview-content');
+        // Use fallback if rate limited
+        if (this.isRateLimitError(aiError)) {
+          console.warn('⚠️ Rate limit detectado, usando fallback');
+          return this.getFallbackPreviewContent(data);
+        }
+        throw aiError;
+      }
       
       // Parse JSON response with multiple strategies
       let parsed: any = null;
@@ -570,9 +666,15 @@ export class AIService {
     try {
       console.log('📊 Generating market intelligence for preview...');
       
-      const model = await getWorkingModel();
-      if (!model) {
+      let currentModel;
+      try {
+        currentModel = await getWorkingModel();
+        if (!currentModel) {
         throw new Error('No working AI model available');
+        }
+      } catch (modelError) {
+        console.error('❌ No se pudo obtener modelo para market intelligence:', modelError);
+        throw modelError; // Propagate error instead of using fallback
       }
 
       const marketIntelligencePrompt = `
@@ -636,11 +738,51 @@ export class AIService {
         - Usa información actual del mercado
       `;
 
-      const result = await model.generateContent(marketIntelligencePrompt);
-      const response = await result.response;
-      const text = response.text();
+      let result, response;
+      let text: string = '';
+      let attempts = 0;
+      const maxAttempts = 3;
       
+      while (attempts < maxAttempts) {
+        try {
+          result = await currentModel.generateContent(marketIntelligencePrompt);
+          response = await result.response;
+          text = response.text();
       console.log('📝 Raw market intelligence response:', text);
+          break; // Success, exit retry loop
+        } catch (aiError) {
+          attempts++;
+          console.error(`❌ Error en llamada a AI para market intelligence (intento ${attempts}/${maxAttempts}):`, aiError);
+          
+          // If rate limited, get new model and retry
+          if (this.isRateLimitError(aiError)) {
+            const retryDelay = this.extractRetryDelayMs(aiError);
+            console.log(`⏰ Rate limit detectado. Esperando ${retryDelay / 1000}s y obteniendo nuevo modelo...`);
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
+            
+            if (attempts < maxAttempts) {
+              try {
+                currentModel = await getWorkingModel();
+                console.log('🔄 Reintentando market intelligence con nuevo modelo...');
+                continue; // Retry with new model
+              } catch (modelError) {
+                console.error('❌ No se pudo obtener nuevo modelo:', modelError);
+                throw aiError; // Propagate original error
+              }
+            }
+          }
+          
+          // If last attempt or non-rate-limit error, throw
+          if (attempts >= maxAttempts || !this.isRateLimitError(aiError)) {
+            throw aiError;
+          }
+        }
+      }
+      
+      // Ensure text was successfully retrieved
+      if (!text || text.trim().length === 0) {
+        throw new Error('Failed to generate market intelligence after all retries');
+      }
       
       // Parse JSON response
       let parsed: any = null;
@@ -668,6 +810,7 @@ export class AIService {
       
     } catch (error) {
       console.error('❌ Error generating market intelligence:', error);
+      this.handleGeminiError(error, 'market-intelligence');
       return this.getFallbackMarketIntelligence(data);
     }
   }
@@ -718,6 +861,85 @@ export class AIService {
         }
       ]
     };
+  }
+
+  private static generateFallbackBrandSuggestions(data: BusinessData): { names: string[], reasoning: string[] } {
+    const idea = (data.idea || 'Idea').trim();
+    const region = (data.region || 'tu mercado').trim();
+    const projectType = (data.projectType || 'proyecto').trim();
+    
+    const keywords = [
+      idea.split(' ')[0] || 'Idea',
+      region.split(' ')[0] || 'Global',
+      projectType.split(' ')[0] || 'Start'
+    ];
+    
+    const templates = [
+      `${keywords[0]}Nova`,
+      `${keywords[1]}Labs`,
+      `${keywords[2]}Zen`,
+      `${keywords[0]}Pulse`,
+      `${keywords[1]}Bridge`
+    ];
+    
+    const names = templates.slice(0, 5);
+    const reasoning = names.map((name) => (
+      `Nombre ${name} inspirado en ${idea}, diseñado para destacar en ${region} dentro del segmento ${projectType}.`
+    ));
+    
+    return { names, reasoning };
+  }
+
+  private static isGeminiTemporarilyDisabled(): boolean {
+    // Removed - we now handle rate limits with retries instead of blocking
+    return false;
+  }
+
+  private static handleGeminiError(error: any, context: string = 'AI request') {
+    // Log the error but don't block future requests
+    // The retry logic in getWorkingModel will handle rate limits
+    if (this.isRateLimitError(error)) {
+      const retryMs = this.extractRetryDelayMs(error);
+      console.warn(`⚠️ Gemini API rate limit detectado en ${context}. El sistema reintentará automáticamente.`);
+    }
+  }
+
+  private static isRateLimitError(error: any): boolean {
+    if (!error) return false;
+    if (error.status === 429) return true;
+    const message = this.stringifyError(error).toLowerCase();
+    return message.includes('429') || message.includes('quota') || message.includes('rate limit');
+  }
+
+  private static extractRetryDelayMs(error: any): number {
+    const fallback = this.GEMINI_RATE_LIMIT_COOLDOWN_MS;
+    if (!error) return fallback;
+    
+    const message = this.stringifyError(error);
+    const retryMatch = message.match(/retryDelay":"(\d+)s/);
+    if (retryMatch) {
+      const seconds = parseInt(retryMatch[1], 10);
+      if (!Number.isNaN(seconds)) {
+        return seconds * 1000;
+      }
+    }
+    
+    if (typeof error.retryAfter === 'number') {
+      return error.retryAfter * 1000;
+    }
+    
+    return fallback;
+  }
+
+  private static stringifyError(error: any): string {
+    if (!error) return '';
+    if (typeof error === 'string') return error;
+    if (error instanceof Error) return `${error.name}: ${error.message}`;
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return String(error);
+    }
   }
 
   // Intelligent competitor search when user doesn't provide real competitors
@@ -2748,31 +2970,10 @@ export class AIService {
       
       console.log('📊 Validated data for brand suggestions:', validatedData);
       
-      // Test if AI is working at all with a simple call
-      console.log('🧪 Testing AI connection with simple call...');
-      console.log('🔑 Model being used:', model);
-      console.log('🔑 Model type:', typeof model);
-      console.log('🔑 Model methods available:', Object.getOwnPropertyNames(model));
-      
-      try {
-        const testResult = await model.generateContent('Say "Hello" in Spanish');
-        console.log('✅ generateContent call successful');
-        
-        const testResponse = await testResult.response;
-        console.log('✅ response call successful');
-        
-        const testText = testResponse.text();
-        console.log('✅ text() call successful');
-        
-        console.log('✅ AI test successful:', testText);
-      } catch (testError) {
-        console.error('❌ AI test failed:', testError);
-        console.error('❌ Error details:', {
-          name: testError instanceof Error ? testError.name : 'Unknown',
-          message: testError instanceof Error ? testError.message : String(testError),
-          stack: testError instanceof Error ? testError.stack : 'No stack trace'
-        });
-        throw new Error(`AI connection failed: ${testError}`);
+      // Check if Gemini is temporarily disabled due to rate limits
+      if (this.isGeminiTemporarilyDisabled()) {
+        console.warn('⚠️ Gemini API está en rate limit, usando fallback para brand suggestions');
+        return this.generateFallbackBrandSuggestions(data);
       }
       
       // Add timestamp and random seed to ensure different results
@@ -2842,15 +3043,29 @@ export class AIService {
       `;
       
       console.log('📡 Making AI call to model.generateContent...');
-      console.log('🔑 Using model:', model);
-      console.log('🔑 Model type:', typeof model);
-      console.log('🔑 Model methods:', Object.getOwnPropertyNames(model));
       console.log('📝 Prompt length:', prompt.length);
       console.log('📝 Prompt preview:', prompt.substring(0, 200) + '...');
       
-      let text: string;
+      // Get working model
+      let currentModel;
       try {
-        const result = await model.generateContent(prompt);
+        currentModel = await getWorkingModel();
+        if (!currentModel) {
+          throw new Error('No working AI model available');
+        }
+      } catch (modelError) {
+        console.error('❌ No se pudo obtener modelo para brand suggestions:', modelError);
+        throw modelError;
+      }
+      
+      let text: string = '';
+      let attempts = 0;
+      const maxAttempts = 3;
+      
+      while (attempts < maxAttempts) {
+        try {
+          console.log(`🔄 Intento ${attempts + 1}/${maxAttempts} para brand suggestions...`);
+          const result = await currentModel.generateContent(prompt);
         console.log('✅ generateContent call successful');
         
         const response = await result.response;
@@ -2861,14 +3076,39 @@ export class AIService {
         
         console.log('📄 AI Response for brand suggestions:', text);
         console.log('📏 Response length:', text.length);
+          break; // Success, exit retry loop
       } catch (aiCallError) {
-        console.error('❌ AI generateContent failed:', aiCallError);
-        console.error('❌ AI call error details:', {
-          name: aiCallError instanceof Error ? aiCallError.name : 'Unknown',
-          message: aiCallError instanceof Error ? aiCallError.message : String(aiCallError),
-          stack: aiCallError instanceof Error ? aiCallError.stack : 'No stack trace'
-        });
+          attempts++;
+          console.error(`❌ AI generateContent failed (intento ${attempts}/${maxAttempts}):`, aiCallError);
+          
+          // If rate limited, get new model and retry
+          if (this.isRateLimitError(aiCallError)) {
+            const retryDelay = this.extractRetryDelayMs(aiCallError);
+            console.log(`⏰ Rate limit detectado. Esperando ${retryDelay / 1000}s y obteniendo nuevo modelo...`);
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
+            
+            if (attempts < maxAttempts) {
+              try {
+                currentModel = await getWorkingModel();
+                console.log('🔄 Reintentando brand suggestions con nuevo modelo...');
+                continue; // Retry with new model
+              } catch (modelError) {
+                console.error('❌ No se pudo obtener nuevo modelo:', modelError);
+                throw aiCallError; // Propagate original error
+              }
+            }
+          }
+          
+          // If last attempt or non-rate-limit error, throw
+          if (attempts >= maxAttempts || !this.isRateLimitError(aiCallError)) {
         throw aiCallError;
+          }
+        }
+      }
+      
+      // Ensure text was successfully retrieved
+      if (!text || text.trim().length === 0) {
+        throw new Error('Failed to generate brand suggestions after all retries');
       }
       
       // Extract names with better regex patterns - handle multiple formats

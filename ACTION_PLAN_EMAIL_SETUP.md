@@ -18,7 +18,7 @@ El sistema automáticamente:
    - Template ID para los emails del plan de acción
 
 2. **Plantilla de EmailJS** creada con las siguientes variables disponibles:
-   - `to_email`: Email del destinatario
+   - `to_email`: **Email del destinatario (OBLIGATORIO usar en campo "To Email")**
    - `subject`: Asunto del email (se genera automáticamente)
    - `user_name`: Nombre del usuario
    - `user_email`: Email del usuario
@@ -30,6 +30,8 @@ El sistema automáticamente:
    - `dashboard_url`: URL del dashboard
    - `name`: Nombre del remitente (Konsul Plan)
    - `email`: Email del remitente (plan@konsul.digital)
+
+   **⚠️ IMPORTANTE:** En la plantilla de EmailJS, el campo **"To Email"** DEBE usar `{{to_email}}`, NO un email fijo como `plan@konsul.digital`. Ver `EMAILJS_TEMPLATE_SETUP.md` para más detalles.
 
 ## ⚙️ Configuración
 

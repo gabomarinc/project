@@ -7,6 +7,8 @@ export const EMAIL_CONFIG = {
     USER_ID: import.meta.env.VITE_EMAILJS_USER_ID || 'default_user',
     API_URL: 'https://api.emailjs.com/api/v1.0/email/send',
     // Template ID for action plan step reminders (configurable)
+    // IMPORTANT: In Vite, only variables with VITE_ prefix are exposed to the frontend
+    // For Vercel, use VITE_EMAILJS_ACTION_PLAN_TEMPLATE_ID in environment variables
     ACTION_PLAN_TEMPLATE_ID: import.meta.env.VITE_EMAILJS_ACTION_PLAN_TEMPLATE_ID || ''
   },
   
