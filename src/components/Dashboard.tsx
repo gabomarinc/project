@@ -3145,8 +3145,6 @@ const Dashboard: React.FC<DashboardProps> = ({ name, email, idea, problem, ideal
           
           <div className="flex items-center gap-2 lg:gap-3 flex-wrap" style={{ minWidth: 'fit-content' }}>
             {/* Botón para crear nuevo dashboard - Siempre visible - FORZADO */}
-            {/* Debug: Verificar que el botón se renderiza */}
-            {console.log('🔍 [Dashboard] Renderizando botón "Nuevo Dashboard" - email:', email, 'dashboardId:', dashboardId)}
             <button
               onClick={async () => {
                 console.log('🚀 Botón "Nuevo Dashboard" clickeado');
