@@ -159,9 +159,10 @@ function App() {
     }
   };
   
-  // Airtable dashboard integration - only initialize when email is available
+  // Airtable dashboard integration - only initialize when email is available AND not showing login
+  // Deshabilitar durante login para evitar llamadas innecesarias a Airtable
   // Note: createOrUpdateDashboard no longer needed, using createFullDashboard instead
-  useAirtableDashboard(email && email.trim().length > 0 ? email : '');
+  useAirtableDashboard(email && email.trim().length > 0 && !showLogin ? email : '');
 
   const fullText = 'validar tu idea y montar tu negocio';
 

@@ -2723,6 +2723,18 @@ const Dashboard: React.FC<DashboardProps> = ({ name, email, idea, problem, ideal
     }
   };
 
+  // Debug: Verificar que el componente Dashboard se renderiza
+  useEffect(() => {
+    console.log('🎨 Dashboard component renderizado');
+    console.log('📊 Props recibidas:', {
+      email,
+      dashboardId,
+      previewSessionId,
+      isExpired
+    });
+    console.log('✅ Botón "Nuevo Dashboard" debería estar visible en el header');
+  }, [email, dashboardId, previewSessionId, isExpired]);
+
   // Verificar estado de pago cuando se carga el componente
   useEffect(() => {
     if (previewSessionId) {
@@ -2812,6 +2824,9 @@ const Dashboard: React.FC<DashboardProps> = ({ name, email, idea, problem, ideal
                 }))
               });
             } catch (error) {
+              // No bloquear el render del Dashboard si hay error al programar emails
+              console.error('⚠️ Error al programar emails del plan de acción (no crítico):', error);
+              console.log('💡 El Dashboard seguirá funcionando normalmente, solo los emails no se programaron');
               console.error('❌ Error scheduling action plan emails:', error);
             }
           })();
@@ -3126,17 +3141,21 @@ const Dashboard: React.FC<DashboardProps> = ({ name, email, idea, problem, ideal
           </div>
           
           <div className="flex items-center gap-2 lg:gap-3 flex-wrap">
-            {/* Botón para crear nuevo dashboard */}
+            {/* Botón para crear nuevo dashboard - Siempre visible */}
             <button
               onClick={async () => {
+                console.log('🚀 Botón "Nuevo Dashboard" clickeado');
                 // Verificar si el usuario tiene pago registrado
                 const hasPayment = await AirtableService.hasUserEverPaid(email);
+                console.log('💳 Usuario tiene pago:', hasPayment);
                 setUserHasPayment(hasPayment);
                 setShowNewDashboardModal(true);
               }}
-              className="flex items-center gap-2 px-3 lg:px-4 py-2 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-500/30 rounded-lg text-cyan-300 hover:text-cyan-200 hover:border-cyan-400 transition-all duration-300 text-sm"
+              className="flex items-center gap-2 px-3 lg:px-4 py-2 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-500/30 rounded-lg text-cyan-300 hover:text-cyan-200 hover:border-cyan-400 transition-all duration-300 text-sm whitespace-nowrap z-10 relative"
+              title="Crear nuevo dashboard"
+              aria-label="Crear nuevo dashboard"
             >
-              <Rocket className="w-4 h-4" />
+              <Rocket className="w-4 h-4 flex-shrink-0" />
               <span className="hidden sm:inline">Nuevo Dashboard</span>
               <span className="sm:hidden">Nuevo</span>
             </button>

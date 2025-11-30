@@ -332,15 +332,23 @@ class ActionPlanEmailScheduler {
         scheduledEmailsLength: emailsData.length
       });
 
+      // Obtener el record ID real de Airtable usando el dashboard_id
+      const { AirtableService } = await import('../services/airtableService');
+      const dashboardResult = await AirtableService.getDashboardById(dashboardId);
+      
+      if (!dashboardResult.success || !dashboardResult.dashboard || !dashboardResult.dashboard.id) {
+        console.error('❌ No se pudo obtener el record ID de Airtable para dashboard:', dashboardId);
+        throw new Error('Dashboard not found in Airtable');
+      }
+      
+      const recordId = dashboardResult.dashboard.id;
+      console.log('🔑 Record ID obtenido:', recordId, 'para dashboard ID:', dashboardId);
+
+      // Usar el endpoint correcto con el record ID
       const response = await axios.patch(
-        AIRTABLE_TABLE_URL,
+        `${AIRTABLE_TABLE_URL}/${recordId}`,
         {
-          records: [
-            {
-              id: dashboardId,
-              fields: updateFields
-            }
-          ]
+          fields: updateFields
         },
         {
           headers: {
@@ -350,8 +358,9 @@ class ActionPlanEmailScheduler {
         }
       );
 
-      if (response.data && response.data.records && response.data.records.length > 0) {
-        const updatedRecord = response.data.records[0];
+      // La respuesta de PATCH con record ID es diferente
+      if (response.data && response.data.fields) {
+        const updatedRecord = response.data;
         const savedEmailsField = updatedRecord.fields[scheduledEmailsField];
         
         console.log('✅ Scheduled emails saved to Airtable:', {
@@ -389,8 +398,20 @@ class ActionPlanEmailScheduler {
       console.error('Error details:', {
         message: error?.message,
         response: error?.response?.data,
-        status: error?.response?.status
+        status: error?.response?.status,
+        dashboardId
       });
+      
+      // No lanzar el error para que no bloquee el render del Dashboard
+      // Solo loguear el error y continuar
+      if (error?.response?.status === 422) {
+        console.error('🔍 Error 422 - Detalles específicos:');
+        console.error('📋 Error message:', error?.response?.data?.error?.message || error?.response?.data?.message);
+        console.error('💡 Verifica que los campos existan en Airtable:', {
+          scheduledEmailsField: DASHBOARD_FIELDS.SCHEDULED_ACTION_PLAN_EMAILS,
+          lastUpdatedField: DASHBOARD_FIELDS.ACTION_PLAN_EMAILS_LAST_UPDATED
+        });
+      }
       
       // Intentar usar el endpoint de API como fallback (solo en producción)
       if (typeof window !== 'undefined' && !window.location.hostname.includes('localhost')) {

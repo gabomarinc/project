@@ -38,6 +38,82 @@ export interface DashboardSearchResult {
 }
 
 export class AirtableService {
+  // Cache para evitar múltiples llamadas simultáneas a la misma función
+  private static pendingRequests = new Map<string, Promise<any>>();
+  
+  // Rate limiter global: mínimo 200ms entre solicitudes
+  private static lastRequestTime = 0;
+  private static readonly MIN_REQUEST_INTERVAL = 200; // 200ms = máximo 5 solicitudes por segundo
+  
+  // Helper function para rate limiting global
+  private static async rateLimit(): Promise<void> {
+    const now = Date.now();
+    const timeSinceLastRequest = now - this.lastRequestTime;
+    
+    if (timeSinceLastRequest < this.MIN_REQUEST_INTERVAL) {
+      const waitTime = this.MIN_REQUEST_INTERVAL - timeSinceLastRequest;
+      console.log(`⏳ Rate limiting: esperando ${waitTime}ms antes de la siguiente solicitud`);
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+    }
+    
+    this.lastRequestTime = Date.now();
+  }
+  
+  // Helper function para hacer retry con exponential backoff para errores 429
+  private static async retryWithBackoff<T>(
+    fn: () => Promise<T>,
+    maxRetries: number = 5,
+    baseDelay: number = 2000
+  ): Promise<T> {
+    let lastError: any;
+    
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        return await fn();
+      } catch (error: any) {
+        lastError = error;
+        
+        // Solo hacer retry para errores 429 (Rate Limit)
+        if (error?.response?.status === 429 && attempt < maxRetries) {
+          // Leer retry-after de diferentes formas posibles
+          let retryAfterSeconds: number | null = null;
+          const headers = error?.response?.headers || {};
+          
+          // Intentar leer retry-after en diferentes formatos
+          if (headers['retry-after']) {
+            retryAfterSeconds = parseInt(headers['retry-after'], 10);
+          } else if (headers['Retry-After']) {
+            retryAfterSeconds = parseInt(headers['Retry-After'], 10);
+          } else if (headers['retryafter']) {
+            retryAfterSeconds = parseInt(headers['retryafter'], 10);
+          }
+          
+          // Calcular delay con exponential backoff
+          const exponentialDelay = baseDelay * Math.pow(2, attempt);
+          
+          // Usar el mayor entre retry-after y exponential delay, con un mínimo de 5 segundos
+          const waitTime = Math.max(
+            5000, // Mínimo 5 segundos
+            retryAfterSeconds ? retryAfterSeconds * 1000 : exponentialDelay
+          );
+          
+          console.log(`⏳ Rate limit alcanzado (429). Reintentando en ${Math.round(waitTime / 1000)}s... (intento ${attempt + 1}/${maxRetries})`);
+          if (retryAfterSeconds) {
+            console.log(`📋 Airtable sugiere esperar ${retryAfterSeconds}s`);
+          }
+          
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+          continue;
+        }
+        
+        // Para otros errores, lanzar inmediatamente
+        throw error;
+      }
+    }
+    
+    throw lastError;
+  }
+
   // Generate a unique dashboard ID
   private static generateDashboardId(): string {
     return `dashboard_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -83,6 +159,9 @@ export class AirtableService {
         console.log('⚠️ Skipping dashboard search - email is empty');
         return { success: true, dashboard: undefined };
       }
+      
+      // Aplicar rate limiting antes de hacer la solicitud
+      await this.rateLimit();
       
       // Use direct HTTP request with Bearer token authentication
       const response = await axios.get(AIRTABLE_TABLE_URL, {
@@ -1499,16 +1578,18 @@ export class AirtableService {
       
       // Buscar dashboards del usuario con sesión activa
       // Buscar primero dashboards activos, luego todos los que tengan sesión activa
-      const response = await axios.get(AIRTABLE_TABLE_URL, {
-        headers: {
-          'Authorization': `Bearer ${AIRTABLE_CONFIG.PERSONAL_ACCESS_TOKEN}`,
-          'Content-Type': 'application/json'
-        },
-        params: {
-          filterByFormula: `AND({${DASHBOARD_FIELDS.USER_EMAIL}} = "${email}", {${DASHBOARD_FIELDS.USER_PASSWORD}} = "${password}", {${DASHBOARD_FIELDS.IS_SESSION_ACTIVE}} = TRUE())`,
-          sort: [{ field: DASHBOARD_FIELDS.CREATED_AT, direction: 'desc' }],
-          maxRecords: 100 // Buscar en todos los dashboards con sesión activa
-        }
+      const response = await this.retryWithBackoff(async () => {
+        return await axios.get(AIRTABLE_TABLE_URL, {
+          headers: {
+            'Authorization': `Bearer ${AIRTABLE_CONFIG.PERSONAL_ACCESS_TOKEN}`,
+            'Content-Type': 'application/json'
+          },
+          params: {
+            filterByFormula: `AND({${DASHBOARD_FIELDS.USER_EMAIL}} = "${email}", {${DASHBOARD_FIELDS.USER_PASSWORD}} = "${password}", {${DASHBOARD_FIELDS.IS_SESSION_ACTIVE}} = TRUE())`,
+            sort: [{ field: DASHBOARD_FIELDS.CREATED_AT, direction: 'desc' }],
+            maxRecords: 100 // Buscar en todos los dashboards con sesión activa
+          }
+        });
       });
 
       const records = response.data.records;
@@ -1554,9 +1635,25 @@ export class AirtableService {
       return { success: true, dashboard };
 
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      const errorResponse = (error as any)?.response?.data?.error;
+      const errorAny = error as any;
       console.error('❌ Error verificando login:', error);
+      
+      // Manejar error 429 (Rate Limit) - después de todos los reintentos
+      if (errorAny?.response?.status === 429) {
+        console.error('❌ Error 429: Límite de solicitudes excedido en Airtable');
+        console.error('💡 Airtable tiene límites de rate limiting. Por favor:');
+        console.error('   1. Espera unos segundos antes de intentar de nuevo');
+        console.error('   2. Reduce la frecuencia de solicitudes');
+        console.error('   3. Si el problema persiste, verifica tu plan de Airtable');
+        
+        return {
+          success: false,
+          error: 'Demasiadas solicitudes. Por favor, espera unos segundos e intenta de nuevo.'
+        };
+      }
+      
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorResponse = errorAny?.response?.data?.error;
       return { 
         success: false, 
         error: `Error verificando login: ${errorResponse || errorMessage || 'Error desconocido'}` 
@@ -1874,22 +1971,41 @@ export class AirtableService {
 
   // Find user session by email and password
   static async findUserSession(email: string, password: string): Promise<{ success: boolean; dashboardId?: string; error?: string }> {
-    try {
-      console.log('🔍 Buscando sesión de usuario:', email);
-      
-      // Buscar todos los dashboards con sesión activa (no solo los activos)
-      // Esto permite que el usuario pueda iniciar sesión incluso si su dashboard fue desactivado
-      const response = await axios.get(`${AIRTABLE_TABLE_URL}`, {
-        headers: {
-          'Authorization': `Bearer ${AIRTABLE_CONFIG.PERSONAL_ACCESS_TOKEN}`,
-          'Content-Type': 'application/json'
-        },
-        params: {
-          filterByFormula: `AND({${DASHBOARD_FIELDS.USER_EMAIL}} = "${email}", {${DASHBOARD_FIELDS.USER_PASSWORD}} = "${password}", {${DASHBOARD_FIELDS.IS_SESSION_ACTIVE}} = TRUE())`,
-          maxRecords: 100, // Buscar en todos los dashboards con sesión activa
-          sort: [{ field: DASHBOARD_FIELDS.CREATED_AT, direction: 'desc' }]
-        }
-      });
+    // Crear una clave única para esta solicitud
+    const requestKey = `findUserSession_${email}_${password}`;
+    
+    // Si ya hay una solicitud pendiente para esta misma combinación, reutilizarla
+    if (this.pendingRequests.has(requestKey)) {
+      console.log('⏳ Reutilizando solicitud pendiente para:', email);
+      return await this.pendingRequests.get(requestKey)!;
+    }
+    
+    // Crear la promesa de la solicitud
+    const requestPromise = (async () => {
+      try {
+        console.log('🔍 Buscando sesión de usuario:', email);
+        
+        // Aplicar rate limiting antes de hacer la solicitud
+        await this.rateLimit();
+        
+        // Buscar todos los dashboards con sesión activa (no solo los activos)
+        // Esto permite que el usuario pueda iniciar sesión incluso si su dashboard fue desactivado
+        const response = await this.retryWithBackoff(async () => {
+          // Aplicar rate limiting también dentro del retry
+          await this.rateLimit();
+          
+          return await axios.get(`${AIRTABLE_TABLE_URL}`, {
+            headers: {
+              'Authorization': `Bearer ${AIRTABLE_CONFIG.PERSONAL_ACCESS_TOKEN}`,
+              'Content-Type': 'application/json'
+            },
+            params: {
+              filterByFormula: `AND({${DASHBOARD_FIELDS.USER_EMAIL}} = "${email}", {${DASHBOARD_FIELDS.USER_PASSWORD}} = "${password}", {${DASHBOARD_FIELDS.IS_SESSION_ACTIVE}} = TRUE())`,
+              maxRecords: 100, // Buscar en todos los dashboards con sesión activa
+              sort: [{ field: DASHBOARD_FIELDS.CREATED_AT, direction: 'desc' }]
+            }
+          });
+        });
 
       if (response.data.records && response.data.records.length > 0) {
         // Priorizar dashboards activos, si no hay activos, usar el más reciente
@@ -1931,9 +2047,9 @@ export class AirtableService {
           error: 'Credenciales incorrectas o sesión no encontrada'
         };
       }
-    } catch (error: unknown) {
-      const errorAny = error as any;
-      console.error('❌ Error buscando sesión de usuario:', error);
+      } catch (error: unknown) {
+        const errorAny = error as any;
+        console.error('❌ Error buscando sesión de usuario:', error);
       
       // Manejar error 401 (No autorizado) - token inválido o expirado
       if (errorAny?.response?.status === 401) {
@@ -1973,14 +2089,37 @@ export class AirtableService {
         };
       }
       
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      const errorResponse = errorAny?.response?.data?.error;
-      const errorMessageFromResponse = errorAny?.response?.data?.message;
+      // Manejar error 429 (Rate Limit) - después de todos los reintentos
+      if (errorAny?.response?.status === 429) {
+        console.error('❌ Error 429: Límite de solicitudes excedido en Airtable');
+        console.error('💡 Airtable tiene límites de rate limiting. Por favor:');
+        console.error('   1. Espera unos segundos antes de intentar de nuevo');
+        console.error('   2. Reduce la frecuencia de solicitudes');
+        console.error('   3. Si el problema persiste, verifica tu plan de Airtable');
+        
+        return {
+          success: false,
+          error: 'Demasiadas solicitudes. Por favor, espera unos segundos e intenta de nuevo.'
+        };
+      }
       
-      return {
-        success: false,
-        error: errorResponse || errorMessageFromResponse || errorMessage || 'Error de conexión. Por favor, intenta de nuevo.'
-      };
-    }
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorResponse = errorAny?.response?.data?.error;
+        const errorMessageFromResponse = errorAny?.response?.data?.message;
+        
+        return {
+          success: false,
+          error: errorResponse || errorMessageFromResponse || errorMessage || 'Error de conexión. Por favor, intenta de nuevo.'
+        };
+      } finally {
+        // Limpiar el cache después de que termine la solicitud
+        this.pendingRequests.delete(requestKey);
+      }
+    })();
+    
+    // Guardar la promesa en el cache
+    this.pendingRequests.set(requestKey, requestPromise);
+    
+    return await requestPromise;
   }
 }
