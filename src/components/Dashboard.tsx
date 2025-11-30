@@ -2730,10 +2730,13 @@ const Dashboard: React.FC<DashboardProps> = ({ name, email, idea, problem, ideal
       email,
       dashboardId,
       previewSessionId,
-      isExpired
+      isExpired,
+      idea,
+      region
     });
     console.log('✅ Botón "Nuevo Dashboard" debería estar visible en el header');
-  }, [email, dashboardId, previewSessionId, isExpired]);
+    console.log('🔍 Verificando que el header se renderiza correctamente...');
+  }, [email, dashboardId, previewSessionId, isExpired, idea, region]);
 
   // Verificar estado de pago cuando se carga el componente
   useEffect(() => {
@@ -3124,12 +3127,6 @@ const Dashboard: React.FC<DashboardProps> = ({ name, email, idea, problem, ideal
 
         {/* Header */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-8">
-          {/* Debug: Verificar que el header se renderiza */}
-          {(() => {
-            console.log('🎨 [Dashboard] Header renderizado');
-            console.log('📊 Props en header:', { email, idea, region, dashboardId });
-            return null;
-          })()}
           <div className="flex items-center gap-3 lg:gap-4">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-3 mb-1">
