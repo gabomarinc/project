@@ -325,10 +325,18 @@ function App() {
         
         try {
           // Get dashboard data from Airtable
+          console.log('🔄 Llamando a AirtableService.getDashboardById...');
           const result = await AirtableService.getDashboardById(dashboardId);
+          console.log('📊 Resultado de getDashboardById:', {
+            success: result.success,
+            hasDashboard: !!result.dashboard,
+            error: result.error,
+            isExpired: result.isExpired
+          });
           
           if (result.success && result.dashboard) {
             console.log('✅ Dashboard loaded from Airtable:', result.dashboard);
+            console.log('🚀 Estableciendo showDashboard = true');
             
             // Parse dashboard data
             let dashboardData;
@@ -374,9 +382,8 @@ function App() {
             
             setAiPreviewContent(dashboardData);
             setDashboardAIContent(dashboardData);
-            setShowDashboard(true);
             
-            // Set form data from the dashboard record
+            // Set form data from the dashboard record FIRST
             setName(result.dashboard.project_name || '');
             setEmail(result.dashboard.user_email || '');
             setIdea(result.dashboard.business_idea || '');
@@ -387,15 +394,34 @@ function App() {
             setIdealUser(result.dashboard.ideal_user || '');
             setAlternatives(result.dashboard.alternatives || '');
             
+            // Set showDashboard LAST to ensure all state is ready
+            console.log('🚀 Estableciendo showDashboard = true (después de setear todos los estados)');
+            setShowDashboard(true);
+            
             console.log('✅ Dashboard loaded successfully from URL');
+            console.log('📊 Estado final:', {
+              email: result.dashboard.user_email,
+              idea: result.dashboard.business_idea,
+              region: result.dashboard.region,
+              dashboardId: dashboardId
+            });
           } else {
             console.error('❌ Failed to load dashboard from Airtable:', result.error);
+            console.error('📊 Result details:', {
+              success: result.success,
+              hasDashboard: !!result.dashboard,
+              error: result.error
+            });
             // Show error message or redirect
             setShowDashboard(false);
             setShowForm(false);
           }
         } catch (error) {
           console.error('❌ Error loading dashboard from URL:', error);
+          console.error('📊 Error details:', {
+            message: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined
+          });
           setShowDashboard(false);
           setShowForm(false);
         }
@@ -1514,7 +1540,23 @@ function App() {
     );
   }
 
+  // Debug: Log cuando showDashboard cambia
+  useEffect(() => {
+    console.log('🔍 [App] showDashboard changed:', showDashboard);
+    if (showDashboard) {
+      console.log('✅ [App] Renderizando Dashboard component');
+      console.log('📊 [App] Props que se pasarán al Dashboard:', {
+        email,
+        idea,
+        region,
+        dashboardId,
+        hasExistingAIContent: !!dashboardAIContent
+      });
+    }
+  }, [showDashboard, email, idea, region, dashboardId, dashboardAIContent]);
+
   if (showDashboard) {
+    console.log('🎨 [App] Renderizando Dashboard - showDashboard es true');
     return (
       <Dashboard 
         name={name}
