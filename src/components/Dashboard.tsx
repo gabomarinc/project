@@ -3126,6 +3126,11 @@ const Dashboard: React.FC<DashboardProps> = ({ name, email, idea, problem, ideal
       <div className="relative w-full">
 
         {/* Header */}
+        {(() => {
+          console.log('🔴 [FORZADO] Renderizando HEADER del Dashboard');
+          console.log('🔴 [FORZADO] email:', email, 'idea:', idea, 'region:', region);
+          return null;
+        })()}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-8">
           <div className="flex items-center gap-3 lg:gap-4">
         <div className="min-w-0 flex-1">
@@ -3145,6 +3150,11 @@ const Dashboard: React.FC<DashboardProps> = ({ name, email, idea, problem, ideal
           
           <div className="flex items-center gap-2 lg:gap-3 flex-wrap" style={{ minWidth: 'fit-content' }}>
             {/* Botón para crear nuevo dashboard - Siempre visible - FORZADO */}
+            {/* FORZAR RENDER DEL BOTÓN - TEST */}
+            {(() => {
+              console.log('🔴 [FORZADO] Renderizando botón Nuevo Dashboard - email:', email, 'idea:', idea);
+              return null;
+            })()}
             <button
               onClick={async () => {
                 console.log('🚀 Botón "Nuevo Dashboard" clickeado');
@@ -3155,10 +3165,17 @@ const Dashboard: React.FC<DashboardProps> = ({ name, email, idea, problem, ideal
                 setShowNewDashboardModal(true);
               }}
               className="flex items-center gap-2 px-3 lg:px-4 py-2 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-500/30 rounded-lg text-cyan-300 hover:text-cyan-200 hover:border-cyan-400 transition-all duration-300 text-sm whitespace-nowrap z-10 relative"
-              style={{ display: 'flex', visibility: 'visible', opacity: 1 }}
+              style={{ 
+                display: 'flex', 
+                visibility: 'visible', 
+                opacity: 1,
+                position: 'relative',
+                zIndex: 10
+              }}
               title="Crear nuevo dashboard"
               aria-label="Crear nuevo dashboard"
               data-testid="new-dashboard-button"
+              id="new-dashboard-button-forced"
             >
               <Rocket className="w-4 h-4 flex-shrink-0" />
               <span className="hidden sm:inline">Nuevo Dashboard</span>
