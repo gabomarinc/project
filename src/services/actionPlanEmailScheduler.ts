@@ -310,11 +310,12 @@ class ActionPlanEmailScheduler {
 
       // Verificar que los campos existen en la configuración
       const scheduledEmailsField = DASHBOARD_FIELDS.SCHEDULED_ACTION_PLAN_EMAILS;
-      const lastUpdatedField = DASHBOARD_FIELDS.ACTION_PLAN_EMAILS_LAST_UPDATED;
+      // IMPORTANTE: algunos tipos de campos (como "Last modified time" o campos calculados)
+      // no aceptan escrituras desde la API y provocan errores 422.
+      // Para evitar problemas, solo actualizamos el JSON de emails programados.
       
       console.log('🔑 Campos a actualizar:', {
         scheduledEmailsField,
-        lastUpdatedField,
         emailsDataLength: emailsData.length,
         emailsDataSample: emailsData[0]
       });
@@ -322,7 +323,6 @@ class ActionPlanEmailScheduler {
       // Actualizar el dashboard directamente con los campos de emails programados
       const updateFields: any = {
         [scheduledEmailsField]: JSON.stringify(emailsData),
-        [lastUpdatedField]: new Date().toISOString()
       };
 
       console.log('📤 Enviando actualización a Airtable:', {
@@ -407,9 +407,8 @@ class ActionPlanEmailScheduler {
       if (error?.response?.status === 422) {
         console.error('🔍 Error 422 - Detalles específicos:');
         console.error('📋 Error message:', error?.response?.data?.error?.message || error?.response?.data?.message);
-        console.error('💡 Verifica que los campos existan en Airtable:', {
-          scheduledEmailsField: DASHBOARD_FIELDS.SCHEDULED_ACTION_PLAN_EMAILS,
-          lastUpdatedField: DASHBOARD_FIELDS.ACTION_PLAN_EMAILS_LAST_UPDATED
+        console.error('💡 Verifica que el campo de emails programados exista en Airtable:', {
+          scheduledEmailsFieldName: 'scheduled_action_plan_emails'
         });
       }
       
