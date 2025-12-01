@@ -452,8 +452,8 @@ export class AIService {
       let model;
       try {
         model = await getWorkingModel();
-        if (!model) {
-          throw new Error('No working AI model available');
+      if (!model) {
+        throw new Error('No working AI model available');
         }
         console.log('✅ [SECURITY] Using AI model initialized with secure API key method');
       } catch (modelError) {

@@ -6,9 +6,9 @@ Este documento explica el nuevo sistema de emails del plan de acción que funcio
 
 El sistema ahora:
 - ✅ **Guarda los emails programados en Airtable** cuando se crea/actualiza un dashboard
-- ✅ **Envía emails automáticamente desde el servidor** usando un cron job de Vercel
+- ✅ **Envía emails automáticamente desde el servidor** usando un job programado
 - ✅ **Funciona sin que el usuario tenga la app abierta**
-- ✅ **Verifica y envía emails cada hora** automáticamente
+- ✅ **Verifica y envía emails cada hora** automáticamente mediante **GitHub Actions**
 
 ## 📁 Archivos Creados
 
@@ -20,29 +20,21 @@ Endpoint API que guarda los emails programados en Airtable cuando el usuario cre
 - Guarda todos los emails programados en el campo `scheduled_action_plan_emails` del dashboard en Airtable
 
 ### 2. `api/send-scheduled-emails.ts`
-Cron job que se ejecuta cada hora para verificar y enviar emails que están listos.
+ Job backend que verifica y envía emails que están listos.
 
 **Funcionamiento:**
-- Se ejecuta automáticamente cada hora (configurado en `vercel.json`)
 - Busca todos los dashboards activos con emails programados
 - Verifica qué emails deben enviarse hoy (fecha de envío = hoy)
 - Envía los emails usando EmailJS
 - Marca los emails como enviados en Airtable
 
-### 3. `vercel.json`
-Configuración de Vercel para el cron job.
+### 3. `.github/workflows/send-scheduled-emails.yml`
+Workflow de **GitHub Actions** que se ejecuta cada hora y llama al endpoint `/api/send-scheduled-emails` desplegado en Vercel.
 
-**Configuración:**
-```json
-{
-  "crons": [
-    {
-      "path": "/api/send-scheduled-emails",
-      "schedule": "0 * * * *"  // Cada hora
-    }
-  ]
-}
-```
+**Funcionamiento:**
+- Se ejecuta automáticamente cada hora (trigger `schedule` de GitHub Actions)
+- Hace una petición HTTP `GET` a tu endpoint de Vercel
+- Envía un header `Authorization: Bearer CRON_SECRET` para proteger el job
 
 ## 🔧 Configuración Requerida
 
@@ -67,7 +59,21 @@ CRON_SECRET=tu_secret_aleatorio
 
 **Nota:** Las variables pueden usar el prefijo `VITE_` o no, el código maneja ambos casos.
 
-### 2. Campos en Airtable
+### 2. Secrets en GitHub Actions
+
+En tu repositorio de GitHub, ve a:
+- `Settings` → `Secrets and variables` → `Actions` → `New repository secret`
+
+Configura al menos:
+
+```bash
+SEND_SCHEDULED_EMAILS_URL=https://TU_DOMINIO_VERSEL/api/send-scheduled-emails
+CRON_SECRET=el_mismo_valor_que_USAS_en_Vercel
+```
+
+> `SEND_SCHEDULED_EMAILS_URL` debe apuntar al endpoint de producción en Vercel (`konsul-plan.vercel.app` o el dominio que estés usando).
+
+### 3. Campos en Airtable
 
 Asegúrate de que tu tabla `Dashboards` en Airtable tenga estos campos:
 
@@ -90,8 +96,9 @@ Asegúrate de que tu tabla `Dashboards` en Airtable tenga estos campos:
    - Los guarda en el campo `scheduled_action_plan_emails` del dashboard
    - Formato: JSON con array de objetos con información de cada email
 
-3. **Envío automático (Cron Job):**
-   - Cada hora, Vercel ejecuta `/api/send-scheduled-emails`
+3. **Envío automático (Job programado):**
+- Cada hora, **GitHub Actions** ejecuta el workflow `send-scheduled-emails.yml`
+- El workflow llama al endpoint `/api/send-scheduled-emails` en Vercel
    - Busca dashboards con emails programados
    - Verifica qué emails deben enviarse hoy (sendDate = hoy)
    - Envía los emails usando EmailJS
@@ -151,7 +158,7 @@ curl -X POST https://tu-dominio.com/api/schedule-action-plan-emails \
   }'
 ```
 
-### Probar el Cron Job Manualmente:
+### Probar el Job de Envío Manualmente (endpoint):
 
 ```bash
 curl -X GET https://tu-dominio.com/api/send-scheduled-emails \
@@ -165,15 +172,13 @@ O desde Vercel Dashboard:
 
 ## 🔒 Seguridad
 
-### Protección del Cron Job:
+### Protección del Endpoint de Envío:
 
-El cron job puede protegerse con un secret:
+El endpoint `/api/send-scheduled-emails` puede protegerse con un secret:
 
-1. Agrega `CRON_SECRET` en Vercel environment variables
-2. El cron job verificará el header `Authorization: Bearer {CRON_SECRET}`
-3. Si no está configurado, el cron job funcionará sin autenticación (solo desde Vercel)
-
-**Nota:** Vercel automáticamente agrega headers especiales cuando ejecuta cron jobs, pero es buena práctica agregar un secret adicional.
+1. Agrega `CRON_SECRET` en las variables de entorno de Vercel
+2. El endpoint verificará el header `Authorization: Bearer {CRON_SECRET}`
+3. En GitHub Actions, configura el mismo `CRON_SECRET` como secret y mándalo en el header
 
 ## 📝 Logs y Monitoreo
 

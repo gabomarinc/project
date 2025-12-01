@@ -879,23 +879,23 @@ const AnalysisPreview: React.FC<AnalysisPreviewProps> = ({
                 ) : (
                   // Usuario sin pago previo - Texto original
                   <>
-                    <div className="text-center mb-3 sm:mb-4">
-                      <h3 className="text-lg sm:text-xl font-bold text-white mb-2">🎯 ¡Casi listo!</h3>
-                      <p className="text-gray-300 text-xs sm:text-sm">
-                        Solo falta completar el pago para desbloquear tu análisis completo
+                <div className="text-center mb-3 sm:mb-4">
+                  <h3 className="text-lg sm:text-xl font-bold text-white mb-2">🎯 ¡Casi listo!</h3>
+                  <p className="text-gray-300 text-xs sm:text-sm">
+                    Solo falta completar el pago para desbloquear tu análisis completo
+                  </p>
+                </div>
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400 flex-shrink-0" />
+                    <div>
+                      <p className="text-white text-xs sm:text-sm font-medium">Análisis completo bloqueado</p>
+                      <p className="text-gray-400 text-xs mt-1">
+                        Accede a todas las secciones detalladas por solo €5
                       </p>
                     </div>
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
-                      <div className="flex items-center gap-2 sm:gap-3">
-                        <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400 flex-shrink-0" />
-                        <div>
-                          <p className="text-white text-xs sm:text-sm font-medium">Análisis completo bloqueado</p>
-                          <p className="text-gray-400 text-xs mt-1">
-                            Accede a todas las secciones detalladas por solo €5
-                          </p>
-                        </div>
-                      </div>
-                      <button
+                  </div>
+                  <button
                         onClick={async () => {
                           // Verificar si el usuario ya tiene pago registrado
                           if (userEmail && userEmail.trim().length > 0) {
@@ -922,43 +922,43 @@ const AnalysisPreview: React.FC<AnalysisPreviewProps> = ({
                           }
                           
                           // Si no tiene pago o no se pudo verificar, proceder con el flujo normal de Stripe
-                          // DEBUG: Verificar previewSessionId desde múltiples fuentes
-                          console.log('🚨 DEBUGGING STRIPE REDIRECT:');
-                          console.log('🔍 previewSessionId prop:', previewSessionId);
-                          console.log('🔍 previewSessionId type:', typeof previewSessionId);
-                          console.log('🔍 previewSessionId length:', previewSessionId?.length);
-                          
-                          // INTENTAR OBTENER EL ID DESDE LOCALSTORAGE SI NO ESTÁ DISPONIBLE
-                          const storedPreviewId = localStorage.getItem('previewSessionId');
-                          console.log('💾 storedPreviewId from localStorage:', storedPreviewId);
-                          
-                          // USAR EL ID DISPONIBLE (prop o localStorage)
-                          const finalPreviewId = previewSessionId || storedPreviewId;
-                          console.log('✅ finalPreviewId to use:', finalPreviewId);
-                          
-                          if (!finalPreviewId) {
-                            console.error('❌ NO HAY PREVIEW ID DISPONIBLE!');
-                            alert('Error: No se encontró el ID del preview. Por favor, recarga la página e intenta de nuevo.');
-                            return;
-                          }
-                          
-                          // Crear URL de redirección con parámetros de sesión y pago exitoso
-                          const currentUrl = window.location.origin + window.location.pathname;
-                          const redirectUrl = `${currentUrl}?session_email=${encodeURIComponent(userInputs.idea.split(' ')[0] + '@example.com')}&session_password=${encodeURIComponent('temp_password')}&session_preview_id=${finalPreviewId}&payment_success=true&return_to_preview=true`;
-                          
-                          console.log('🔗 redirectUrl:', redirectUrl);
-                          
-                          // Abrir Stripe con URL de redirección
-                          const stripeUrl = `https://buy.stripe.com/cNi5kD1KX5zkfgUdAsgjC02?success_url=${encodeURIComponent(redirectUrl)}`;
-                          console.log('💳 stripeUrl:', stripeUrl);
-                          window.location.href = stripeUrl;
-                        }}
-                        className="px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-cyan-500 via-green-500 to-blue-600 text-white font-bold rounded-lg hover:from-cyan-600 hover:via-green-600 hover:to-blue-700 transition-all flex items-center justify-center gap-2 shadow-lg transform hover:scale-105 text-xs sm:text-sm w-full sm:w-auto"
-                      >
-                        💳 Pagar €5 y Desbloquear
-                        <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
-                      </button>
-                    </div>
+                      // DEBUG: Verificar previewSessionId desde múltiples fuentes
+                      console.log('🚨 DEBUGGING STRIPE REDIRECT:');
+                      console.log('🔍 previewSessionId prop:', previewSessionId);
+                      console.log('🔍 previewSessionId type:', typeof previewSessionId);
+                      console.log('🔍 previewSessionId length:', previewSessionId?.length);
+                      
+                      // INTENTAR OBTENER EL ID DESDE LOCALSTORAGE SI NO ESTÁ DISPONIBLE
+                      const storedPreviewId = localStorage.getItem('previewSessionId');
+                      console.log('💾 storedPreviewId from localStorage:', storedPreviewId);
+                      
+                      // USAR EL ID DISPONIBLE (prop o localStorage)
+                      const finalPreviewId = previewSessionId || storedPreviewId;
+                      console.log('✅ finalPreviewId to use:', finalPreviewId);
+                      
+                      if (!finalPreviewId) {
+                        console.error('❌ NO HAY PREVIEW ID DISPONIBLE!');
+                        alert('Error: No se encontró el ID del preview. Por favor, recarga la página e intenta de nuevo.');
+                        return;
+                      }
+                      
+                      // Crear URL de redirección con parámetros de sesión y pago exitoso
+                      const currentUrl = window.location.origin + window.location.pathname;
+                      const redirectUrl = `${currentUrl}?session_email=${encodeURIComponent(userInputs.idea.split(' ')[0] + '@example.com')}&session_password=${encodeURIComponent('temp_password')}&session_preview_id=${finalPreviewId}&payment_success=true&return_to_preview=true`;
+                      
+                      console.log('🔗 redirectUrl:', redirectUrl);
+                      
+                      // Abrir Stripe con URL de redirección
+                      const stripeUrl = `https://buy.stripe.com/cNi5kD1KX5zkfgUdAsgjC02?success_url=${encodeURIComponent(redirectUrl)}`;
+                      console.log('💳 stripeUrl:', stripeUrl);
+                      window.location.href = stripeUrl;
+                    }}
+                    className="px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-cyan-500 via-green-500 to-blue-600 text-white font-bold rounded-lg hover:from-cyan-600 hover:via-green-600 hover:to-blue-700 transition-all flex items-center justify-center gap-2 shadow-lg transform hover:scale-105 text-xs sm:text-sm w-full sm:w-auto"
+                  >
+                    💳 Pagar €5 y Desbloquear
+                    <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
+                  </button>
+                </div>
                   </>
                 )}
               </div>

@@ -1,0 +1,43 @@
+name: "Enviar correos programados del plan de acción"
+
+on:
+  schedule:
+    # Cada hora (UTC). Ajusta si necesitas otra frecuencia.
+    - cron: "0 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  trigger-send-scheduled-emails:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Llamar endpoint /api/send-scheduled-emails en Vercel"
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          SEND_SCHEDULED_EMAILS_URL: ${{ secrets.SEND_SCHEDULED_EMAILS_URL }}
+        run: |
+          if [ -z "$SEND_SCHEDULED_EMAILS_URL" ]; then
+            echo "❌ FALTA el secret SEND_SCHEDULED_EMAILS_URL en GitHub (Settings → Secrets → Actions)."
+            exit 1
+          fi
+
+          if [ -z "$CRON_SECRET" ]; then
+            echo "⚠️ FALTA el secret CRON_SECRET en GitHub. La llamada se hará sin Authorization, solo funcionará si el endpoint no lo exige."
+            curl -X GET "$SEND_SCHEDULED_EMAILS_URL"
+            exit 0
+          fi
+
+          echo "🚀 Llamando a $SEND_SCHEDULED_EMAILS_URL con Authorization Bearer."
+          HTTP_STATUS=$(curl -s -o response.json -w "%{http_code}" \
+            -X GET "$SEND_SCHEDULED_EMAILS_URL" \
+            -H "Authorization: Bearer $CRON_SECRET")
+
+          echo "Código HTTP: $HTTP_STATUS"
+          echo "Respuesta:"
+          cat response.json || echo "(sin cuerpo de respuesta)"
+
+          if [ "$HTTP_STATUS" -ge 400 ]; then
+            echo "❌ La llamada al endpoint de correos programados falló."
+            exit 1
+          fi
+
+
