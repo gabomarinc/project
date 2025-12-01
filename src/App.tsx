@@ -1492,6 +1492,21 @@ function App() {
   console.log('🔍 App render - isSessionCreated:', isSessionCreated);
   console.log('🔍 App render - isCreatingSession:', isCreatingSession);
 
+  // Debug: Log cuando showDashboard cambia
+  useEffect(() => {
+    console.log('🔍 [App] showDashboard changed:', showDashboard);
+    if (showDashboard) {
+      console.log('✅ [App] Renderizando Dashboard component');
+      console.log('📊 [App] Props que se pasarán al Dashboard:', {
+        email,
+        idea,
+        region,
+        dashboardId,
+        hasExistingAIContent: !!dashboardAIContent
+      });
+    }
+  }, [showDashboard, email, idea, region, dashboardId, dashboardAIContent]);
+
   if (showPreview) {
     console.log('✅ Rendering AnalysisPreview component');
     return (
@@ -1539,21 +1554,6 @@ function App() {
       <AirtableTest />
     );
   }
-
-  // Debug: Log cuando showDashboard cambia
-  useEffect(() => {
-    console.log('🔍 [App] showDashboard changed:', showDashboard);
-    if (showDashboard) {
-      console.log('✅ [App] Renderizando Dashboard component');
-      console.log('📊 [App] Props que se pasarán al Dashboard:', {
-        email,
-        idea,
-        region,
-        dashboardId,
-        hasExistingAIContent: !!dashboardAIContent
-      });
-    }
-  }, [showDashboard, email, idea, region, dashboardId, dashboardAIContent]);
 
   if (showDashboard) {
     console.log('🎨 [App] Renderizando Dashboard - showDashboard es true');
