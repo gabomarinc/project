@@ -60,11 +60,20 @@ const analyzeStepDifficulty = (stepContent: string, stepNumber: number): number 
 };
 
 /**
- * Calcula fechas de vencimiento realistas considerando la dificultad de cada paso
+ * Calcula fechas de vencimiento realistas considerando la dificultad de cada paso.
+ * 
+ * @param actionPlanSteps Lista de pasos del plan de acción
+ * @param baseDate Fecha base desde la cual contar (por defecto, hoy).
+ *        IMPORTANTE: para dashboards ya creados, usar siempre la fecha original
+ *        (por ejemplo, generatedAt o created_at) para que las fechas no cambien
+ *        cada vez que el usuario abre el dashboard.
  */
-export const calculateDeadlines = (actionPlanSteps: string[]): string[] => {
+export const calculateDeadlines = (
+  actionPlanSteps: string[],
+  baseDate?: string | Date
+): string[] => {
   const deadlines: string[] = [];
-  const startDate = new Date();
+  const startDate = baseDate ? new Date(baseDate) : new Date();
   const totalSteps = actionPlanSteps.length;
   
   // Analizar dificultad de cada paso

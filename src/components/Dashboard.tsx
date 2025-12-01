@@ -2788,9 +2788,18 @@ const Dashboard: React.FC<DashboardProps> = ({ name, email, idea, problem, ideal
   // Calculate deadlines when aiContent changes
   useEffect(() => {
     if (aiContent) {
+      // Usar una fecha base estable para que las fechas no se muevan cada vez
+      // Prioridad:
+      // 1) aiContent.generatedAt (guardado en dashboard_data)
+      // 2) previewSessionId/dashboardId (si más adelante pasamos created_at)
+      // 3) Fecha actual como último recurso
+      const baseDate =
+        (aiContent as any).generatedAt ||
+        undefined;
+
       // Calculate deadlines for action plan based on actual step content
       if (aiContent.actionPlan && Array.isArray(aiContent.actionPlan)) {
-        const actionPlanDeadlines = calculateDeadlines(aiContent.actionPlan);
+        const actionPlanDeadlines = calculateDeadlines(aiContent.actionPlan, baseDate);
         setActionPlanDeadlines(actionPlanDeadlines);
         console.log('📅 Action plan deadlines calculated:', actionPlanDeadlines);
         
@@ -2841,7 +2850,7 @@ const Dashboard: React.FC<DashboardProps> = ({ name, email, idea, problem, ideal
       if (bitacoraSteps && Array.isArray(bitacoraSteps)) {
         // Extract descriptions from bitácora steps for difficulty analysis
         const bitacoraStepDescriptions = bitacoraSteps.map(step => step.description || step.title || '');
-        const bitacoraDeadlines = calculateDeadlines(bitacoraStepDescriptions);
+        const bitacoraDeadlines = calculateDeadlines(bitacoraStepDescriptions, baseDate);
         setBitacoraDeadlines(bitacoraDeadlines);
         console.log('📅 Bitácora deadlines calculated:', bitacoraDeadlines);
       }
